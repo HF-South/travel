@@ -39,11 +39,14 @@ const SITE_DATA = {
     "France",
     "Italy",
     "Switzerland",
-    "Austria",
+    "Thailand",
     "Spain",
     "Portugal",
-    "Norway",
-    "Iceland",
+    "Denmark",
+    "Poland",
+    "Indonesia",
+    "Dutch Caribbean",
+    "Curaçao",
   ],
 
   /* ----------------------------------------------------------
