@@ -77,45 +77,7 @@ const SITE_DATA = {
   ---------------------------------------------------------- */
   trips: [
     /* --- POLARSTEPS SYNC START (do not edit this block by hand — it gets overwritten by import_trips.py) --- */
-    {
-      title: "Chasing the Aurora",
-      country: "Norway",
-      year: 2025,
-      season: "Winter",
-      description: "Two weeks chasing the northern lights along the Lofoten Islands.",
-      narrative: "Two weeks chasing the northern lights along the Lofoten Islands, sleeping in cabins that smelled of woodsmoke and salt air. Some nights the sky delivered nothing but cloud and cold coffee — others, the whole fjord turned green.",
-      coverImage: "",
-      images: [],
-      highlights: ["Reine at sunset", "Hiking to Ryten", "Aurora over Uttakleiv beach"],
-      distanceKm: 0,
-      days: 14,
-    },
-    {
-      title: "Highlands & Glaciers",
-      country: "Iceland",
-      year: 2024,
-      season: "Summer",
-      description: "A ring-road loop past black sand beaches, glacier tongues, and steaming valleys.",
-      narrative: "A ring-road loop past black sand beaches, glacier tongues, and geothermal valleys that never stopped steaming. Ten days, one small car, and more waterfalls than seemed reasonable for one island.",
-      coverImage: "",
-      images: [],
-      highlights: ["Jökulsárlón glacier lagoon", "Landmannalaugar", "Diamond Beach"],
-      distanceKm: 0,
-      days: 10,
-    },
-    {
-      title: "Alpine Crossing",
-      country: "France / Italy / Switzerland",
-      year: 2026,
-      season: "Summer",
-      description: "Following the Tour du Mont Blanc through three countries in a single loop.",
-      narrative: "Following the Tour du Mont Blanc through three countries in a single loop, one pass at a time.",
-      coverImage: "",
-      images: [],
-      highlights: [],
-      distanceKm: 170,
-      days: 10,
-    },
+    
     /* --- POLARSTEPS SYNC END --- */
 
     // Add any trips not on Polarsteps below this line — they won't be touched by the import script.
