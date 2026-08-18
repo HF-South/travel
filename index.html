@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 <style>
 
   :root{
@@ -170,29 +172,42 @@
   }
   .map-sub{ color:var(--text-muted); font-size:0.9rem; margin:0 0 16px; }
 
-  svg#map-svg{ width:100%; height:auto; display:block; background:var(--bg-void); border-radius:4px; }
-  .graticule line{ stroke:var(--line-topo-soft); stroke-width:1; }
-  .continent{
-    fill:rgba(124,160,133,0.08);
-    stroke:rgba(124,160,133,0.28);
-    stroke-width:1.2;
+  #map-container{
+    width:100%; height:520px;
+    border-radius:4px;
+    overflow:hidden;
+    background:var(--bg-void);
   }
-  .pin-halo{ fill:var(--accent-amber); opacity:0.16; }
-  .pin-dot{ fill:var(--accent-amber); }
-  .pin{ animation:popIn .5s ease both; cursor:default; }
-  @keyframes popIn{ from{ opacity:0; transform:scale(0.4) translateY(4px); } to{ opacity:1; transform:scale(1) translateY(0); } }
-  .pin:hover .pin-halo{ opacity:0.35; r:9; }
-  .route-line{
-    fill:none;
-    stroke:var(--accent-moss);
-    stroke-width:1;
-    stroke-dasharray:3 5;
-    opacity:0.55;
-    stroke-linecap:round;
-    stroke-dashoffset:1000;
-    animation:draw 2.4s ease forwards;
+  /* tone MapLibre's default UI down to fit the dark theme */
+  .maplibregl-ctrl-group{
+    background:var(--bg-panel) !important;
+    border:1px solid var(--line-topo) !important;
+    box-shadow:none !important;
   }
-  @keyframes draw{ to{ stroke-dashoffset:0; } }
+  .maplibregl-ctrl-group button{ background:transparent !important; }
+  .maplibregl-ctrl-group button:not(:disabled):hover{ background:var(--bg-raised) !important; }
+  .maplibregl-ctrl-attrib{
+    background:rgba(11,15,14,0.7) !important;
+    color:var(--text-faint) !important;
+  }
+  .maplibregl-ctrl-attrib a{ color:var(--text-muted) !important; }
+  .maplibregl-popup-content{
+    background:var(--bg-panel) !important;
+    color:var(--text-primary) !important;
+    font-family:var(--font-mono);
+    font-size:0.78rem;
+    border:1px solid var(--line-topo);
+    box-shadow:none !important;
+  }
+  .maplibregl-popup-tip{ border-top-color:var(--bg-panel) !important; border-bottom-color:var(--bg-panel) !important; }
+
+  .map-pin-marker{
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent-amber);
+    box-shadow:0 0 0 6px rgba(232,163,61,0.18);
+    border:2px solid var(--bg-void);
+    cursor:pointer;
+  }
 
   #map-country-list{
     list-style:none; margin:16px 0 0; padding:0;
@@ -380,7 +395,7 @@
     <h1>The map so far.</h1>
     <p class="lede">Every pin is a country crossed off the list — the dotted line traces the order they were added.</p>
     <div class="map-wrap">
-      <svg id="map-svg" viewBox="0 0 1000 500" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="map-container"></div>
       <ul id="map-country-list"></ul>
     </div>
   </section>
