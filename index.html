@@ -177,7 +177,26 @@
     border-radius:4px;
     overflow:hidden;
     background:var(--bg-void);
+    position:relative;
   }
+  /* OpenFreeMap's "liberty" style is the stable, actively-maintained one —
+     we theme it dark with a filter on just the canvas, so markers/popups
+     on top keep their normal colours. */
+  #map-container .maplibregl-canvas{
+    filter: invert(1) hue-rotate(190deg) brightness(1.04) contrast(0.92) saturate(0.85);
+  }
+  #map-fallback{
+    position:absolute; inset:0;
+    display:none;
+    align-items:center; justify-content:center;
+    text-align:center;
+    padding:24px;
+    font-family:var(--font-mono);
+    font-size:0.8rem;
+    color:var(--text-muted);
+    background:var(--bg-void);
+  }
+  #map-fallback.show{ display:flex; }
   /* tone MapLibre's default UI down to fit the dark theme */
   .maplibregl-ctrl-group{
     background:var(--bg-panel) !important;
@@ -395,7 +414,9 @@
     <h1>The map so far.</h1>
     <p class="lede">Every pin is a country crossed off the list — the dotted line traces the order they were added.</p>
     <div class="map-wrap">
-      <div id="map-container"></div>
+      <div id="map-container">
+        <div id="map-fallback">Map couldn't load — check your internet connection.<br>(It needs to reach tiles.openfreemap.org and unpkg.com.)</div>
+      </div>
       <ul id="map-country-list"></ul>
     </div>
   </section>
