@@ -47,7 +47,7 @@ const SITE_DATA = {
     "Indonesia",
     "Luxemburg",
     "Vatican City",
-    "Dutch Caribbean",
+    "Bonaire",
     "Curaçao",
   ],
 
