@@ -77,6 +77,15 @@ function renderStats() {
 
 let mapInstance = null;
 
+function showMapFallback() {
+  const el = document.getElementById("map-fallback");
+  if (el) el.classList.add("show");
+}
+function hideMapFallback() {
+  const el = document.getElementById("map-fallback");
+  if (el) el.classList.remove("show");
+}
+
 function countryPoints() {
   const points = [];
   SITE_DATA.countries.forEach((name) => {
@@ -99,18 +108,29 @@ function renderCountryList() {
 }
 
 function initMap() {
-  if (mapInstance || typeof maplibregl === "undefined") return;
+  if (mapInstance || typeof maplibregl === "undefined") {
+    if (typeof maplibregl === "undefined") showMapFallback();
+    return;
+  }
 
   mapInstance = new maplibregl.Map({
     container: "map-container",
-    style: "https://tiles.openfreemap.org/styles/dark",
+    style: "https://tiles.openfreemap.org/styles/liberty",
     center: [10, 30],
     zoom: 1.1,
     attributionControl: true,
   });
   mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
 
+  const loadTimeout = setTimeout(showMapFallback, 8000);
+  mapInstance.on("error", (e) => {
+    console.error("Map failed to load:", e && e.error);
+    showMapFallback();
+  });
+
   mapInstance.on("load", () => {
+    clearTimeout(loadTimeout);
+    hideMapFallback();
     const points = countryPoints();
 
     if (points.length > 1) {
