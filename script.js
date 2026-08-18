@@ -5,221 +5,50 @@
    rough centroid coordinates and add a line in the same format.
    ============================================================ */
 const COUNTRY_COORDS = {
-  // Africa
-  "Algeria": [28.0, 1.7], // DZ
-  "Angola": [-11.2, 17.9], // AO
-  "Benin": [9.3, 2.3], // BJ
-  "Botswana": [-22.3, 24.7], // BW
-  "Burkina Faso": [12.2, -1.6], // BF
-  "Burundi": [-3.4, 29.9], // BI
-  "Cabo Verde": [16.0, -24.0], // CV
-  "Cameroon": [3.8, 11.5], // CM
-  "Central African Republic": [6.6, 20.9], // CF
-  "Chad": [15.5, 18.7], // TD
-  "Comoros": [-11.9, 43.3], // KM
-  "Democratic Republic of the Congo": [-4.0, 21.8], // CD
-  "Republic of the Congo": [-0.2, 15.8], // CG
-  "Djibouti": [11.8, 42.6], // DJ
-  "Egypt": [26.8, 30.8], // EG
-  "Equatorial Guinea": [1.6, 10.3], // GQ
-  "Eritrea": [15.2, 39.8], // ER
-  "Eswatini": [-26.5, 31.5], // SZ
-  "Ethiopia": [9.1, 40.5], // ET
-  "Gabon": [-0.8, 11.6], // GA
-  "Gambia": [13.4, -15.3], // GM
-  "Ghana": [7.9, -1.0], // GH
-  "Guinea": [9.9, -9.7], // GN
-  "Guinea-Bissau": [12.0, -15.2], // GW
-  "Ivory Coast": [7.5, -5.5], // CI
-  "Kenya": [-0.0, 37.9], // KE
-  "Lesotho": [-29.6, 28.2], // LS
-  "Liberia": [6.4, -9.4], // LR
-  "Libya": [26.3, 17.2], // LY
-  "Madagascar": [-18.8, 47.0], // MG
-  "Malawi": [-13.3, 34.3], // MW
-  "Mali": [17.6, -4.0], // ML
-  "Mauritania": [21.0, -10.9], // MR
-  "Mauritius": [-20.3, 57.6], // MU
-  "Morocco": [31.8, -7.1], // MA
-  "Mozambique": [-18.7, 35.5], // MZ
-  "Namibia": [-22.9, 18.5], // NA
-  "Niger": [17.6, 8.1], // NE
-  "Nigeria": [9.1, 8.7], // NG
-  "Rwanda": [-1.9, 29.9], // RW
-  "Sao Tome and Principe": [0.2, 6.6], // ST
-  "Senegal": [14.5, -14.5], // SN
-  "Seychelles": [-4.7, 55.5], // SC
-  "Sierra Leone": [8.5, -11.8], // SL
-  "Somalia": [5.2, 46.2], // SO
-  "South Africa": [-30.6, 22.9], // ZA
-  "South Sudan": [7.3, 30.0], // SS
-  "Sudan": [12.9, 30.2], // SD
-  "Tanzania": [-6.4, 34.9], // TZ
-  "Togo": [8.6, 0.8], // TG
-  "Tunisia": [33.9, 9.5], // TN
-  "Uganda": [1.4, 32.3], // UG
-  "Zambia": [-13.1, 27.8], // ZM
-  "Zimbabwe": [-19.0, 29.2], // ZW
-
-  // Americas
-  "Antigua and Barbuda": [17.1, -61.8], // AG
-  "Argentina": [-38.4, -63.6], // AR
-  "Bahamas": [24.3, -76.6], // BS
-  "Barbados": [13.2, -59.5], // BB
-  "Belize": [17.2, -88.5], // BZ
-  "Bolivia": [-16.3, -63.6], // BO
-  "Brazil": [-14.2, -51.9], // BR
-  "Canada": [56.1, -106.3], // CA
-  "Chile": [-35.7, -71.5], // CL
-  "Colombia": [4.6, -74.3], // CO
-  "Costa Rica": [9.7, -83.8], // CR
-  "Cuba": [21.5, -77.8], // CU
-  "Dominica": [15.4, -61.4], // DM
-  "Dominican Republic": [18.7, -70.2], // DO
-  "Ecuador": [-1.8, -78.2], // EC
-  "El Salvador": [13.8, -88.9], // SV
-  "Grenada": [12.1, -61.7], // GD
-  "Guatemala": [15.8, -90.2], // GT
-  "Guyana": [4.9, -58.9], // GY
-  "Haiti": [18.9, -72.3], // HT
-  "Honduras": [15.2, -86.2], // HN
-  "Jamaica": [18.1, -77.3], // JM
-  "Mexico": [23.6, -102.6], // MX
-  "Nicaragua": [12.9, -85.2], // NI
-  "Panama": [8.5, -80.8], // PA
-  "Paraguay": [-23.4, -58.4], // PY
-  "Peru": [-9.2, -75.0], // PE
-  "Saint Kitts and Nevis": [17.4, -62.8], // KN
-  "Saint Lucia": [13.9, -60.9], // LC
-  "Saint Vincent and the Grenadines": [13.0, -61.2], // VC
-  "Suriname": [4.0, -56.0], // SR
-  "Trinidad and Tobago": [10.7, -61.2], // TT
-  "United States": [39.8, -98.6], // US
-  "Uruguay": [-32.5, -55.8], // UY
-  "Venezuela": [6.4, -66.6], // VE
-  
-   // Dutch Caribbean
-  "Aruba": [12.5, -69.97], // AW
-  "Curacao": [12.17, -68.99], // CW
-  "Curaçao": [12.17, -68.99], // CW — duplicate with the accented spelling, in case you type it that way
-  "Sint Maarten": [18.04, -63.06], // SX (Dutch side of the island)
-  "Bonaire": [12.2, -68.25], // BQ
-  "Saba": [17.63, -63.23], // BQ
-  "Sint Eustatius": [17.48, -62.98], // BQ
-
-  // Asia
-  "Afghanistan": [33.9, 67.7], // AF
-  "Armenia": [40.1, 45.0], // AM
-  "Azerbaijan": [40.1, 47.6], // AZ
-  "Bahrain": [26.0, 50.5], // BH
-  "Bangladesh": [23.7, 90.4], // BD
-  "Bhutan": [27.5, 90.4], // BT
-  "Brunei": [4.5, 114.7], // BN
-  "Cambodia": [12.6, 104.9], // KH
-  "China": [35.9, 104.2], // CN
-  "Cyprus": [35.1, 33.4], // CY
-  "Georgia": [42.3, 43.4], // GE
-  "India": [20.6, 78.9], // IN
-  "Indonesia": [-0.8, 113.9], // ID
-  "Iran": [32.4, 53.7], // IR
-  "Iraq": [33.2, 43.7], // IQ
-  "Israel": [31.0, 34.9], // IL
-  "Japan": [36.2, 138.3], // JP
-  "Jordan": [30.6, 36.2], // JO
-  "Kazakhstan": [48.0, 66.9], // KZ
-  "Kuwait": [29.3, 47.5], // KW
-  "Kyrgyzstan": [41.2, 74.8], // KG
-  "Laos": [19.9, 102.5], // LA
-  "Lebanon": [33.9, 35.9], // LB
-  "Malaysia": [4.2, 101.9], // MY
-  "Maldives": [3.2, 73.2], // MV
-  "Mongolia": [46.9, 103.8], // MN
-  "Myanmar": [21.9, 95.9], // MM
-  "Nepal": [28.4, 84.1], // NP
-  "North Korea": [40.3, 127.5], // KP
-  "Oman": [21.5, 55.9], // OM
-  "Pakistan": [30.4, 69.3], // PK
-  "Palestine": [31.9, 35.2], // PS
-  "Philippines": [12.9, 121.8], // PH
-  "Qatar": [25.4, 51.2], // QA
-  "Saudi Arabia": [23.9, 45.1], // SA
-  "Singapore": [1.35, 103.8], // SG
-  "South Korea": [35.9, 127.8], // KR
-  "Sri Lanka": [7.9, 80.7], // LK
-  "Syria": [34.8, 38.9], // SY
-  "Tajikistan": [38.9, 71.3], // TJ
-  "Thailand": [15.9, 100.9], // TH
-  "Timor-Leste": [-8.9, 125.7], // TL
-  "Turkey": [38.9, 35.2], // TR
-  "Turkmenistan": [38.9, 59.6], // TM
-  "United Arab Emirates": [23.4, 53.8], // AE
-  "Uzbekistan": [41.4, 64.6], // UZ
-  "Vietnam": [14.1, 108.3], // VN
-  "Yemen": [15.6, 48.0], // YE
-
-  // Europe
-  "Albania": [41.2, 20.2], // AL
-  "Andorra": [42.5, 1.6], // AD
-  "Austria": [47.6, 14.6], // AT
-  "Belarus": [53.7, 27.9], // BY
-  "Belgium": [50.5, 4.5], // BE
-  "Bosnia and Herzegovina": [43.9, 17.7], // BA
-  "Bulgaria": [42.7, 25.5], // BG
-  "Croatia": [45.1, 15.2], // HR
-  "Czech Republic": [49.8, 15.5], // CZ
-  "Denmark": [56.0, 9.5], // DK
-  "Estonia": [58.6, 25.0], // EE
-  "Finland": [64.9, 26.0], // FI
-  "France": [46.6, 2.5], // FR
-  "Germany": [51.2, 10.4], // DE
-  "Greece": [39.1, 21.8], // GR
-  "Hungary": [47.2, 19.5], // HU
-  "Iceland": [64.9, -19.0], // IS
-  "Ireland": [53.4, -8.2], // IE
-  "Italy": [42.8, 12.6], // IT
-  "Kosovo": [42.6, 20.9], // XK
-  "Latvia": [56.9, 24.6], // LV
-  "Liechtenstein": [47.2, 9.5], // LI
-  "Lithuania": [55.2, 23.9], // LT
-  "Luxembourg": [49.8, 6.1], // LU
-  "Malta": [35.9, 14.4], // MT
-  "Moldova": [47.4, 28.4], // MD
-  "Monaco": [43.7, 7.4], // MC
-  "Montenegro": [42.7, 19.4], // ME
-  "Netherlands": [52.1, 5.3], // NL
-  "North Macedonia": [41.6, 21.7], // MK
-  "Norway": [64.6, 11.0], // NO
-  "Poland": [51.9, 19.1], // PL
-  "Portugal": [39.6, -8.0], // PT
-  "Romania": [45.9, 25.0], // RO
-  "Russia": [61.5, 105.3], // RU
-  "San Marino": [43.9, 12.5], // SM
-  "Serbia": [44.0, 21.0], // RS
-  "Slovakia": [48.7, 19.7], // SK
-  "Slovenia": [46.1, 14.8], // SI
-  "Spain": [40.0, -3.7], // ES
-  "Sweden": [62.2, 15.0], // SE
-  "Switzerland": [46.8, 8.2], // CH
-  "Ukraine": [48.4, 31.2], // UA
-  "United Kingdom": [54.0, -2.0], // GB
-  "Vatican City": [41.9, 12.45], // VA
-
-  // Oceania
-  "Australia": [-25.3, 133.8], // AU
-  "Fiji": [-17.7, 178.1], // FJ
-  "Kiribati": [1.9, -157.4], // KI
-  "Marshall Islands": [7.1, 171.2], // MH
-  "Micronesia": [7.4, 150.6], // FM
-  "Nauru": [-0.5, 166.9], // NR
-  "New Zealand": [-41.0, 174.9], // NZ
-  "Palau": [7.5, 134.6], // PW
-  "Papua New Guinea": [-6.3, 143.9], // PG
-  "Samoa": [-13.8, -172.1], // WS
-  "Solomon Islands": [-9.6, 160.2], // SB
-  "Tonga": [-21.2, -175.2], // TO
-  "Tuvalu": [-7.1, 177.6], // TV
-  "Vanuatu": [-15.4, 166.9], // VU
+  "Netherlands": [52.1, 5.3], "Belgium": [50.5, 4.5], "Germany": [51.2, 10.4],
+  "France": [46.6, 2.5], "Italy": [42.8, 12.6], "Switzerland": [46.8, 8.2],
+  "Austria": [47.6, 14.6], "Spain": [40.0, -3.7], "Portugal": [39.6, -8.0],
+  "United Kingdom": [54.0, -2.0], "Ireland": [53.4, -8.2], "Norway": [64.6, 11.0],
+  "Sweden": [62.2, 15.0], "Denmark": [56.0, 9.5], "Finland": [64.9, 26.0],
+  "Iceland": [64.9, -19.0], "Poland": [51.9, 19.1], "Czech Republic": [49.8, 15.5],
+  "Slovakia": [48.7, 19.7], "Hungary": [47.2, 19.5], "Slovenia": [46.1, 14.8],
+  "Croatia": [45.1, 15.2], "Greece": [39.1, 21.8], "Turkey": [38.9, 35.2],
+  "Estonia": [58.6, 25.0], "Latvia": [56.9, 24.6], "Lithuania": [55.2, 23.9],
+  "Romania": [45.9, 25.0], "Bulgaria": [42.7, 25.5], "Serbia": [44.0, 21.0],
+  "Bosnia and Herzegovina": [43.9, 17.7], "Montenegro": [42.7, 19.4],
+  "Albania": [41.2, 20.2], "North Macedonia": [41.6, 21.7], "Ukraine": [48.4, 31.2],
+  "Russia": [61.5, 105.3], "Malta": [35.9, 14.4], "Cyprus": [35.1, 33.4],
+  "Luxembourg": [49.8, 6.1], "Morocco": [31.8, -7.1], "Egypt": [26.8, 30.8],
+  "South Africa": [-30.6, 22.9], "Kenya": [-0.0, 37.9], "Tanzania": [-6.4, 34.9],
+  "Namibia": [-22.9, 18.5], "Ghana": [7.9, -1.0], "Nigeria": [9.1, 8.7],
+  "United States": [39.8, -98.6], "USA": [39.8, -98.6], "Canada": [56.1, -106.3],
+  "Mexico": [23.6, -102.6], "Cuba": [21.5, -77.8], "Costa Rica": [9.7, -83.8],
+  "Panama": [8.5, -80.8], "Colombia": [4.6, -74.3], "Peru": [-9.2, -75.0],
+  "Brazil": [-14.2, -51.9], "Argentina": [-38.4, -63.6], "Chile": [-35.7, -71.5],
+  "Bolivia": [-16.3, -63.6], "Ecuador": [-1.8, -78.2],
+  "China": [35.9, 104.2], "Japan": [36.2, 138.3], "South Korea": [35.9, 127.8],
+  "Thailand": [15.9, 100.9], "Vietnam": [14.1, 108.3], "Cambodia": [12.6, 104.9],
+  "Laos": [19.9, 102.5], "Myanmar": [21.9, 95.9], "Malaysia": [4.2, 101.9],
+  "Singapore": [1.35, 103.8], "Indonesia": [-0.8, 113.9], "Philippines": [12.9, 121.8],
+  "India": [20.6, 78.9], "Nepal": [28.4, 84.1], "Sri Lanka": [7.9, 80.7],
+  "Bhutan": [27.5, 90.4], "Pakistan": [30.4, 69.3], "Bangladesh": [23.7, 90.4],
+  "Mongolia": [46.9, 103.8], "Kazakhstan": [48.0, 66.9], "Georgia": [42.3, 43.4],
+  "Armenia": [40.1, 45.0], "Jordan": [30.6, 36.2], "Israel": [31.0, 34.9],
+  "United Arab Emirates": [23.4, 53.8], "Oman": [21.5, 55.9], "Qatar": [25.4, 51.2],
+  "Saudi Arabia": [23.9, 45.1], "Australia": [-25.3, 133.8], "New Zealand": [-41.0, 174.9],
+  "Fiji": [-17.7, 178.1], "Greenland": [71.7, -42.6], "Faroe Islands": [62.0, -6.8],
 };
+
+/* Total countries used as the denominator for the "% of the world explored"
+   stat. 195 = the 193 UN member states + Vatican City + Palestine, which
+   matches the country list already in this file. Change this if you'd
+   rather count differently (e.g. 193 for UN members only). Territories
+   like Aruba/Curaçao/Sint Maarten/Bonaire don't count toward this total
+   even if you track them as pins — they're not separate UN-style countries. */
+const TOTAL_COUNTRIES = 195;
+const TERRITORY_NAMES = new Set([
+  "Aruba", "Curacao", "Curaçao", "Sint Maarten", "Bonaire", "Saba", "Sint Eustatius",
+]);
 
 function fmt(n, digits = 0) {
   return Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits });
@@ -243,12 +72,25 @@ function renderStats() {
   const { countries, hikes, trips } = SITE_DATA;
   const totalKm = hikes.reduce((s, h) => s + (h.distanceKm || 0), 0);
   const totalUp = hikes.reduce((s, h) => s + (h.elevationUp || 0), 0);
+  const countedCountries = countries.filter(c => !TERRITORY_NAMES.has(c));
+  const percent = Math.min(100, (countedCountries.length / TOTAL_COUNTRIES) * 100);
 
   document.getElementById("stat-countries").textContent = countries.length;
   document.getElementById("stat-trips").textContent = trips.length;
   document.getElementById("stat-hikes").textContent = hikes.length;
   document.getElementById("stat-km").textContent = fmt(totalKm, totalKm < 100 ? 1 : 0);
   document.getElementById("stat-elevation").textContent = fmt(totalUp);
+  const pctEl = document.getElementById("stat-percent");
+  if (pctEl) pctEl.textContent = fmt(percent, percent < 10 ? 2 : 1) + "%";
+
+  renderWorldProgress(countedCountries.length, percent);
+}
+
+function renderWorldProgress(count, percent) {
+  const bar = document.getElementById("world-progress-fill");
+  const label = document.getElementById("world-progress-label");
+  if (bar) bar.style.width = percent.toFixed(2) + "%";
+  if (label) label.textContent = `${count} of ${TOTAL_COUNTRIES} countries · ${fmt(percent, percent < 10 ? 2 : 1)}% of the world`;
 }
 
 /* ---------------- Map ----------------
