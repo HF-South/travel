@@ -49,6 +49,7 @@ const SITE_DATA = {
     "Vatican City",
     "Bonaire",
     "Curaçao",
+    "Ireland",
   ],
 
   /* ----------------------------------------------------------
