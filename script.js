@@ -39,30 +39,6 @@ const COUNTRY_COORDS = {
   "Fiji": [-17.7, 178.1], "Greenland": [71.7, -42.6], "Faroe Islands": [62.0, -6.8],
 };
 
-/* Rough, stylised continent silhouettes for map context (abstract, not
-   survey-accurate coastlines — just enough for pins to read as a world map). */
-const CONTINENT_PATHS = [
-  // North America
-  "M95,70 C130,55 175,55 205,75 C230,90 235,120 220,150 C230,175 215,200 190,205 C175,225 150,235 130,220 C105,225 80,205 75,175 C55,160 55,130 75,105 C70,90 80,78 95,70 Z",
-  // South America
-  "M235,255 C255,245 275,255 280,280 C295,300 290,330 280,360 C285,390 270,415 250,420 C240,400 230,375 235,350 C220,330 220,300 230,275 C225,265 228,258 235,255 Z",
-  // Europe
-  "M455,70 C480,60 510,65 525,80 C540,90 535,110 520,120 C525,135 505,145 485,138 C465,145 448,130 450,110 C440,95 445,78 455,70 Z",
-  // Africa
-  "M460,150 C490,140 525,148 540,170 C555,195 550,230 535,260 C540,290 520,330 495,345 C480,320 470,290 468,260 C450,235 448,200 460,175 C452,165 452,157 460,150 Z",
-  // Asia
-  "M560,55 C620,40 700,45 760,65 C820,75 870,90 895,115 C905,140 880,160 850,155 C830,175 795,180 770,165 C740,180 700,175 675,155 C640,165 605,150 585,125 C565,110 555,80 560,55 Z",
-  // Australia
-  "M785,340 C815,330 850,335 870,355 C885,370 880,390 860,398 C835,410 805,405 788,388 C775,375 775,352 785,340 Z",
-];
-
-/* Equirectangular projection onto the 1000x500 map viewBox */
-function project(lat, lng) {
-  const x = (lng + 180) / 360 * 1000;
-  const y = (90 - lat) / 180 * 500;
-  return [x, y];
-}
-
 function fmt(n, digits = 0) {
   return Number(n || 0).toLocaleString(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits });
 }
@@ -94,97 +70,100 @@ function renderStats() {
 }
 
 /* ---------------- Map ----------------
-   Renders one map instance into the given element ids. Called once
-   per map on the page (currently just the one on the Map section) —
-   call it again with different ids if you add another map elsewhere. */
+   A real, pannable/zoomable OpenStreetMap (via OpenFreeMap's free vector
+   tiles + MapLibre GL JS — no API key needed). Pins go on every visited
+   country, with a dotted line connecting them in the order they were
+   added to data.js. */
 
-function renderMapInto(svgId, listId) {
-  const svg = document.getElementById(svgId);
-  const list = document.getElementById(listId);
-  if (!svg) return;
-  svg.innerHTML = "";
-  if (list) list.innerHTML = "";
+let mapInstance = null;
 
-  // continents (background context)
-  const landG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  landG.setAttribute("class", "landmass");
-  CONTINENT_PATHS.forEach(d => {
-    const p = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    p.setAttribute("d", d);
-    p.setAttribute("class", "continent");
-    landG.appendChild(p);
-  });
-  svg.appendChild(landG);
-
-  // graticule
-  const grid = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  grid.setAttribute("class", "graticule");
-  for (let x = 0; x <= 1000; x += 100) grid.appendChild(makeLine(x, 0, x, 500));
-  for (let y = 0; y <= 500; y += 100) grid.appendChild(makeLine(0, y, 1000, y));
-  svg.appendChild(grid);
-
+function countryPoints() {
   const points = [];
   SITE_DATA.countries.forEach((name) => {
     const coord = COUNTRY_COORDS[name];
-    if (list) {
-      const li = document.createElement("li");
-      li.textContent = name;
-      if (!coord) li.classList.add("no-pin");
-      list.appendChild(li);
-    }
-    if (!coord) return;
-    const [x, y] = project(coord[0], coord[1]);
-    points.push({ x, y, name });
+    if (coord) points.push({ lng: coord[1], lat: coord[0], name });
   });
-
-  if (points.length > 1) {
-    const d = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
-    const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-    path.setAttribute("d", d);
-    path.setAttribute("class", "route-line");
-    svg.appendChild(path);
-  }
-
-  const pinsG = document.createElementNS("http://www.w3.org/2000/svg", "g");
-  points.forEach((p, i) => {
-    const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
-    g.setAttribute("class", "pin");
-    g.setAttribute("transform", `translate(${p.x},${p.y})`);
-    g.style.animationDelay = `${i * 60}ms`;
-
-    const halo = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    halo.setAttribute("class", "pin-halo");
-    halo.setAttribute("r", "7");
-
-    const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-    dot.setAttribute("class", "pin-dot");
-    dot.setAttribute("r", "2.6");
-
-    const title = document.createElementNS("http://www.w3.org/2000/svg", "title");
-    title.textContent = p.name;
-
-    g.appendChild(halo);
-    g.appendChild(dot);
-    g.appendChild(title);
-    pinsG.appendChild(g);
-  });
-  svg.appendChild(pinsG);
-
-  if (points.length === 0 && SITE_DATA.countries.length > 0) {
-    // helpful console note rather than a silent blank map
-    console.warn("None of your countries matched COUNTRY_COORDS in script.js — add coordinates there to see pins.");
-  }
+  return points;
 }
 
-function makeLine(x1, y1, x2, y2) {
-  const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
-  line.setAttribute("x1", x1); line.setAttribute("y1", y1);
-  line.setAttribute("x2", x2); line.setAttribute("y2", y2);
-  return line;
+function renderCountryList() {
+  const list = document.getElementById("map-country-list");
+  if (!list) return;
+  list.innerHTML = "";
+  SITE_DATA.countries.forEach((name) => {
+    const li = document.createElement("li");
+    li.textContent = name;
+    if (!COUNTRY_COORDS[name]) li.classList.add("no-pin");
+    list.appendChild(li);
+  });
+}
+
+function initMap() {
+  if (mapInstance || typeof maplibregl === "undefined") return;
+
+  mapInstance = new maplibregl.Map({
+    container: "map-container",
+    style: "https://tiles.openfreemap.org/styles/dark",
+    center: [10, 30],
+    zoom: 1.1,
+    attributionControl: true,
+  });
+  mapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+  mapInstance.on("load", () => {
+    const points = countryPoints();
+
+    if (points.length > 1) {
+      mapInstance.addSource("route", {
+        type: "geojson",
+        data: {
+          type: "Feature",
+          geometry: { type: "LineString", coordinates: points.map(p => [p.lng, p.lat]) },
+        },
+      });
+      mapInstance.addLayer({
+        id: "route-line",
+        type: "line",
+        source: "route",
+        layout: { "line-cap": "round" },
+        paint: {
+          "line-color": "#7CA085",
+          "line-width": 1.5,
+          "line-dasharray": [1, 2],
+          "line-opacity": 0.7,
+        },
+      });
+    }
+
+    points.forEach(p => {
+      const el = document.createElement("div");
+      el.className = "map-pin-marker";
+      new maplibregl.Marker({ element: el })
+        .setLngLat([p.lng, p.lat])
+        .setPopup(new maplibregl.Popup({ offset: 14, closeButton: false }).setText(p.name))
+        .addTo(mapInstance);
+    });
+
+    if (points.length > 0) {
+      const bounds = points.reduce(
+        (b, p) => b.extend([p.lng, p.lat]),
+        new maplibregl.LngLatBounds([points[0].lng, points[0].lat], [points[0].lng, points[0].lat])
+      );
+      mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 5, duration: 0 });
+    } else if (SITE_DATA.countries.length > 0) {
+      console.warn("None of your countries matched COUNTRY_COORDS in script.js — add coordinates there to see pins.");
+    }
+  });
 }
 
 function renderMap() {
-  renderMapInto("map-svg", "map-country-list");
+  renderCountryList();
+  // MapLibre needs a sized, visible container to initialise correctly.
+  // It's safe to call this repeatedly — it only creates the map once,
+  // and route() below calls resize() every time the Map tab is opened.
+  if (document.getElementById("map").classList.contains("active")) {
+    initMap();
+  }
 }
 
 /* ---------------- Trips ---------------- */
@@ -310,6 +289,13 @@ function route() {
     showSection(hash);
   } else {
     showSection("home");
+  }
+
+  if (hash === "map") {
+    initMap();
+    // container was hidden (display:none) until just now, so MapLibre
+    // needs a resize once it has real dimensions to measure.
+    setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 0);
   }
 }
 
