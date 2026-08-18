@@ -242,6 +242,29 @@
   }
   #map-country-list li.no-pin{ border-style:dashed; color:var(--text-faint); }
 
+  .world-progress{ margin-top:20px; }
+  .world-progress-track{
+    height:8px;
+    border-radius:20px;
+    background:var(--bg-void);
+    border:1px solid var(--line-topo);
+    overflow:hidden;
+  }
+  #world-progress-fill{
+    height:100%;
+    width:0%;
+    border-radius:20px;
+    background:linear-gradient(90deg, var(--accent-moss), var(--accent-amber));
+    transition:width 1s ease;
+  }
+  #world-progress-label{
+    display:block;
+    margin-top:8px;
+    font-family:var(--font-mono);
+    font-size:0.75rem;
+    color:var(--text-muted);
+  }
+
   /* ---------- Trips grid ---------- */
   #trips-grid{
     display:grid;
@@ -401,6 +424,7 @@
 
     <div class="stats-strip">
       <div class="stat-cell"><span id="stat-countries">0</span><label>Countries</label></div>
+      <div class="stat-cell"><span id="stat-percent">0%</span><label>World explored</label></div>
       <div class="stat-cell"><span id="stat-trips">0</span><label>Trips logged</label></div>
       <div class="stat-cell"><span id="stat-hikes">0</span><label>Hikes recorded</label></div>
       <div class="stat-cell"><span id="stat-km">0</span><label>Km walked</label></div>
@@ -416,6 +440,10 @@
     <div class="map-wrap">
       <div id="map-container">
         <div id="map-fallback">Map couldn't load — check your internet connection.<br>(It needs to reach tiles.openfreemap.org and unpkg.com.)</div>
+      </div>
+      <div class="world-progress">
+        <div class="world-progress-track"><div id="world-progress-fill"></div></div>
+        <span id="world-progress-label">0 of 195 countries · 0% of the world</span>
       </div>
       <ul id="map-country-list"></ul>
     </div>
