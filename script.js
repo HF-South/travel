@@ -97,6 +97,15 @@ const COUNTRY_COORDS = {
   "United States": [39.8, -98.6], // US
   "Uruguay": [-32.5, -55.8], // UY
   "Venezuela": [6.4, -66.6], // VE
+  
+   // Dutch Caribbean
+  "Aruba": [12.5, -69.97], // AW
+  "Curacao": [12.17, -68.99], // CW
+  "Curaçao": [12.17, -68.99], // CW — duplicate with the accented spelling, in case you type it that way
+  "Sint Maarten": [18.04, -63.06], // SX (Dutch side of the island)
+  "Bonaire": [12.2, -68.25], // BQ
+  "Saba": [17.63, -63.23], // BQ
+  "Sint Eustatius": [17.48, -62.98], // BQ
 
   // Asia
   "Afghanistan": [33.9, 67.7], // AF
