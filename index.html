@@ -345,6 +345,34 @@
     border:1px solid var(--line-topo);
   }
 
+  .day-by-day{ display:flex; flex-direction:column; gap:30px; }
+  .day-block{
+    border-left:2px solid var(--line-topo);
+    padding-left:20px;
+  }
+  .day-header{ margin-bottom:8px; }
+  .day-number{
+    font-family:var(--font-mono);
+    font-size:0.68rem;
+    letter-spacing:0.1em;
+    text-transform:uppercase;
+    color:var(--accent-amber);
+  }
+  .day-date{
+    font-family:var(--font-mono);
+    font-size:0.72rem;
+    color:var(--text-muted);
+    margin-left:8px;
+  }
+  .day-header h3{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:1.1rem;
+    margin:4px 0 0;
+  }
+  .day-description{ color:var(--text-muted); font-size:0.9rem; margin:8px 0 14px; max-width:60ch; }
+  .day-block .gallery{ margin-top:4px; }
+
   /* ---------- Hikes ---------- */
   #hikes-list{ display:flex; flex-direction:column; gap:12px; }
   .hike-row{
