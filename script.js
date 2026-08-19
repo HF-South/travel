@@ -433,16 +433,51 @@ function renderTripDetail(index) {
     wrap.innerHTML = `<p class="empty">Trip not found.</p>`;
     return;
   }
-  const gallery = [t.coverImage, ...(t.images || [])].filter(Boolean);
+  const hasDayByDay = Array.isArray(t.dayByDay) && t.dayByDay.length > 0;
+  const flatGallery = [t.coverImage, ...(t.images || [])].filter(Boolean);
+  const cover = hasDayByDay
+    ? (t.coverImage || t.dayByDay.find(d => d.photos && d.photos.length)?.photos[0] || "")
+    : flatGallery[0];
+
   const stats = [];
   if (t.days) stats.push({ label: "Days", value: t.days });
   if (t.distanceKm) stats.push({ label: "Km covered", value: fmt(t.distanceKm) });
   if (t.country) stats.push({ label: "Where", value: t.country });
   if (t.year) stats.push({ label: "Year", value: t.year });
 
+  let bodyHtml = "";
+
+  if (hasDayByDay) {
+    bodyHtml = `
+      <h2 class="subhead">Day by day</h2>
+      <div class="day-by-day">
+        ${t.dayByDay.map((d, i) => `
+          <div class="day-block">
+            <div class="day-header">
+              <span class="day-number">Day ${i + 1}</span>
+              <span class="day-date">${d.date && d.date !== "unknown" ? formatDayDate(d.date) : ""}</span>
+              ${d.title ? `<h3>${d.title}</h3>` : ""}
+            </div>
+            ${d.description ? `<p class="day-description">${d.description}</p>` : ""}
+            ${(d.photos && d.photos.length) ? `
+              <div class="gallery">
+                ${d.photos.map(src => `<div class="gallery-img" style="background-image:url('${src}')"></div>`).join("")}
+              </div>
+            ` : `<p class="empty">No photos for this day.</p>`}
+          </div>
+        `).join("")}
+      </div>
+    `;
+  } else if (flatGallery.length > 1) {
+    bodyHtml = `
+      <h2 class="subhead">Photos</h2>
+      <div class="gallery">${flatGallery.slice(1).map(src => `<div class="gallery-img" style="background-image:url('${src}')"></div>`).join("")}</div>
+    `;
+  }
+
   wrap.innerHTML = `
-    <div class="trip-detail-media" ${gallery[0] ? `style="background-image:url('${gallery[0]}')"` : ""}>
-      ${!gallery[0] ? `<span class="trip-media-fallback big">${(t.country || "?").slice(0,2).toUpperCase()}</span>` : ""}
+    <div class="trip-detail-media" ${cover ? `style="background-image:url('${cover}')"` : ""}>
+      ${!cover ? `<span class="trip-media-fallback big">${(t.country || "?").slice(0,2).toUpperCase()}</span>` : ""}
     </div>
     <div class="trip-detail-header">
       <span class="trip-year">${t.year || ""}${t.season ? " · " + t.season : ""}</span>
@@ -455,11 +490,14 @@ function renderTripDetail(index) {
       <h2 class="subhead">Highlights</h2>
       <ul class="highlights-list">${t.highlights.map(h => `<li>${h}</li>`).join("")}</ul>
     ` : ""}
-    ${gallery.length > 1 ? `
-      <h2 class="subhead">Photos</h2>
-      <div class="gallery">${gallery.slice(1).map(src => `<div class="gallery-img" style="background-image:url('${src}')"></div>`).join("")}</div>
-    ` : ""}
+    ${bodyHtml}
   `;
+}
+
+function formatDayDate(dateStr) {
+  const d = new Date(dateStr + "T00:00:00Z");
+  if (isNaN(d)) return dateStr;
+  return d.toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
 /* ---------------- Hikes ---------------- */
