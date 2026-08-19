@@ -2,7 +2,8 @@
 """
 import_trips.py
 ----------------
-Turns a Polarsteps data export into trip entries for data.js.
+Turns a Polarsteps data export into trip entries for data.js —
+including every photo, broken down day by day.
 
 Polarsteps doesn't allow automated scraping of profile pages (their
 robots.txt blocks it) and has no public API, but they do offer an
@@ -36,6 +37,8 @@ that's completely safe to do.
 import json
 import re
 import sys
+from collections import OrderedDict
+from datetime import datetime, timezone
 from pathlib import Path
 
 START_MARKER = "/* --- POLARSTEPS SYNC START (do not edit this block by hand — it gets overwritten by import_trips.py) --- */"
@@ -47,7 +50,6 @@ def esc(s):
 
 
 def find_trip_json(trip_folder: Path):
-    # Usually just "trip.json", but be lenient in case of naming variants.
     for name in ("trip.json", "Trip.json"):
         f = trip_folder / name
         if f.exists():
@@ -69,73 +71,117 @@ def extract_countries(trip):
     return names
 
 
-def extract_images(trip, trip_folder: Path, limit=8):
-    # Try to find photo references inside steps; fall back to scanning
-    # for image files physically present in the trip folder.
+def to_date_str(value):
+    """Best-effort conversion of a Polarsteps timestamp (unix seconds,
+    or an ISO-ish string) into a YYYY-MM-DD string."""
+    if value is None:
+        return ""
+    if isinstance(value, (int, float)):
+        try:
+            return datetime.fromtimestamp(value, tz=timezone.utc).strftime("%Y-%m-%d")
+        except Exception:
+            return ""
+    if isinstance(value, str) and len(value) >= 10:
+        return value[:10]
+    return ""
+
+
+def step_photos(step):
     urls = []
-    for step in trip.get("steps", []):
-        for photo in step.get("photos", []) or []:
-            if isinstance(photo, dict):
-                p = photo.get("path") or photo.get("large_thumbnail_path") or photo.get("original")
-                if p:
-                    urls.append(p)
-        if len(urls) >= limit:
-            break
+    for photo in step.get("photos", []) or []:
+        if isinstance(photo, dict):
+            p = photo.get("path") or photo.get("large_thumbnail_path") or photo.get("original")
+            if p:
+                urls.append(p)
+        elif isinstance(photo, str):
+            urls.append(photo)
+    return urls
 
-    if not urls:
-        for ext in ("*.jpg", "*.jpeg", "*.png"):
-            for f in trip_folder.rglob(ext):
-                urls.append(str(f))
-                if len(urls) >= limit:
-                    break
+
+def scan_folder_for_photos(trip_folder: Path, limit=500):
+    """Fallback: if steps have no photo references, just scan the trip's
+    export folder for image files directly."""
+    urls = []
+    for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
+        for f in trip_folder.rglob(ext):
+            urls.append(str(f))
             if len(urls) >= limit:
-                break
+                return urls
+    return urls
 
-    return urls[:limit]
+
+def group_steps_by_day(trip, trip_folder: Path):
+    """Returns an ordered dict: date string -> {title, description, photos[]}"""
+    days = OrderedDict()
+    steps = trip.get("steps", []) or []
+    steps = sorted(steps, key=lambda s: s.get("start_time") or s.get("time") or 0)
+
+    for step in steps:
+        ts = step.get("start_time") or step.get("time")
+        date_str = to_date_str(ts)
+        if not date_str:
+            continue
+
+        loc = step.get("location")
+        loc_name = loc.get("name") if isinstance(loc, dict) else None
+        title = step.get("name") or loc_name or ""
+        description = step.get("description") or ""
+        photos = step_photos(step)
+
+        if date_str not in days:
+            days[date_str] = {"title": title, "description": description, "photos": []}
+        else:
+            if not days[date_str]["title"] and title:
+                days[date_str]["title"] = title
+            if not days[date_str]["description"] and description:
+                days[date_str]["description"] = description
+        days[date_str]["photos"].extend(photos)
+
+    # Fallback: no steps/photos found via JSON — just dump any images found
+    # in the folder into a single unlabelled "day" so nothing is lost.
+    if not days:
+        found = scan_folder_for_photos(trip_folder)
+        if found:
+            days["unknown"] = {"title": "", "description": "", "photos": found}
+
+    return days
 
 
-def extract_highlights(trip, limit=6):
-    names = []
-    for step in trip.get("steps", []):
-        name = step.get("name") or step.get("location", {}).get("name") if isinstance(step.get("location"), dict) else step.get("name")
-        if name and name not in names:
-            names.append(name)
-        if len(names) >= limit:
-            break
-    return names
+def days_to_js(days):
+    if not days:
+        return ""
+    parts = []
+    for date_str, d in days.items():
+        photos_js = ", ".join(f'"{esc(u)}"' for u in d["photos"])
+        parts.append(f"""      {{
+        date: "{date_str}",
+        title: "{esc(d['title'])}",
+        description: "{esc(d['description'])[:220]}",
+        photos: [{photos_js}],
+      }},""")
+    return "\n".join(parts)
 
 
 def trip_to_entry(trip, trip_folder: Path):
     title = esc(trip.get("name") or trip_folder.name)
     description = esc(trip.get("summary") or trip.get("description") or "")
-    start = (trip.get("start_date") or "")
-    year = ""
-    if isinstance(start, (int, float)):
-        # Polarsteps sometimes stores unix timestamps
-        from datetime import datetime, timezone
-        try:
-            year = datetime.fromtimestamp(start, tz=timezone.utc).year
-        except Exception:
-            year = ""
-    elif isinstance(start, str) and len(start) >= 4:
-        year = start[:4]
+
+    start = trip.get("start_date")
+    end = trip.get("end_date")
+    year = to_date_str(start)[:4] if to_date_str(start) else ""
 
     countries = extract_countries(trip)
     country = esc(" / ".join(countries[:3])) if countries else ""
 
-    images = extract_images(trip, trip_folder)
-    cover = images[0] if images else ""
-    gallery = images[1:]
+    days = group_steps_by_day(trip, trip_folder)
+    all_photos = [p for d in days.values() for p in d["photos"]]
+    cover = all_photos[0] if all_photos else ""
 
-    highlights = extract_highlights(trip)
+    days_of_trip = ""
+    if isinstance(start, (int, float)) and isinstance(end, (int, float)):
+        days_of_trip = round((end - start) / 86400)
 
-    days = ""
-    end = trip.get("end_date")
-    if start and end and isinstance(start, (int, float)) and isinstance(end, (int, float)):
-        days = round((end - start) / 86400)
-
-    images_js = ", ".join(f'"{esc(u)}"' for u in gallery)
-    highlights_js = ", ".join(f'"{esc(h)}"' for h in highlights)
+    days_js = days_to_js(days)
 
     return f"""    {{
       title: "{title}",
@@ -145,10 +191,13 @@ def trip_to_entry(trip, trip_folder: Path):
       description: "{description[:180]}",
       narrative: "{description}",
       coverImage: "{esc(cover)}",
-      images: [{images_js}],
-      highlights: [{highlights_js}],
+      images: [],
+      highlights: [],
       distanceKm: 0,
-      days: {days or 0},
+      days: {days_of_trip or 0},
+      dayByDay: [
+{days_js}
+      ],
     }},"""
 
 
@@ -157,7 +206,6 @@ def update_data_js(entries_text, path="data.js"):
         content = f.read()
 
     if START_MARKER not in content:
-        # first run: insert sync block right after the "trips: [" opening
         content = content.replace(
             "trips: [",
             f"trips: [\n{START_MARKER}\n{entries_text}\n    {END_MARKER}\n",
@@ -183,6 +231,7 @@ def main():
         sys.exit(1)
 
     entries = []
+    total_photos = 0
     for trip_folder in sorted(p for p in trips_root.iterdir() if p.is_dir()):
         trip_json = find_trip_json(trip_folder)
         if not trip_json:
@@ -193,7 +242,8 @@ def main():
         except Exception as e:
             print(f"Skipping {trip_folder.name} — couldn't parse trip.json ({e})")
             continue
-        entries.append(trip_to_entry(trip, trip_folder))
+        entry = trip_to_entry(trip, trip_folder)
+        entries.append(entry)
         print(f"Parsed: {trip.get('name', trip_folder.name)}")
 
     if not entries:
@@ -201,8 +251,8 @@ def main():
         return
 
     update_data_js("\n".join(entries))
-    print(f"\nDone — wrote {len(entries)} trips into data.js.")
-    print("Note: image paths point to files inside your export folder — move")
+    print(f"\nDone — wrote {len(entries)} trips into data.js, broken down day by day.")
+    print("Note: photo paths point to files inside your export folder — move")
     print("those photos next to index.html (e.g. an /images folder) and update")
     print("the paths in data.js, or swap in hosted image URLs instead.")
 
