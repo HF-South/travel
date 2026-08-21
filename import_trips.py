@@ -27,11 +27,17 @@ This only touches the block between "POLARSTEPS SYNC START" and
 below that block is left alone.
 
 NOTE: Polarsteps' export format isn't officially documented and can
-vary between accounts/app versions. This script reads the fields that
-are usually present (name, dates, description, steps, photos) and
-skips anything it can't find rather than guessing. If a trip comes
-through with gaps, just fill them in by hand in data.js afterwards —
-that's completely safe to do.
+vary between accounts/app versions. This script tries several ways to
+match photos to the day they were taken, in order:
+  1. Photo references directly inside each step's JSON entry
+  2. A subfolder in the export whose name matches the step's title/location
+  3. EXIF "date taken" metadata read from the photo files themselves
+     (needs Pillow — run "pip install Pillow" first; skipped silently
+     if Pillow isn't installed)
+If none of those work for a trip, photos fall back to being grouped by
+file-modified date, which may not be fully accurate — check the result
+and adjust by hand in data.js if a day looks off. That's always safe;
+the script only touches its own marked block.
 """
 
 import json
@@ -88,33 +94,97 @@ def to_date_str(value):
 
 def step_photos(step):
     urls = []
-    for photo in step.get("photos", []) or []:
-        if isinstance(photo, dict):
-            p = photo.get("path") or photo.get("large_thumbnail_path") or photo.get("original")
-            if p:
-                urls.append(p)
-        elif isinstance(photo, str):
-            urls.append(photo)
+    for key in ("photos", "media", "images"):
+        for photo in step.get(key, []) or []:
+            if isinstance(photo, dict):
+                p = photo.get("path") or photo.get("large_thumbnail_path") or photo.get("original")
+                if p:
+                    urls.append(p)
+            elif isinstance(photo, str):
+                urls.append(photo)
     return urls
 
 
-def scan_folder_for_photos(trip_folder: Path, limit=500):
-    """Fallback: if steps have no photo references, just scan the trip's
-    export folder for image files directly."""
+def normalize(s):
+    return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+
+def find_step_subfolder(trip_folder: Path, step):
+    """Polarsteps sometimes stores each step's photos in their own
+    subfolder inside the trip folder. Only match on an exact
+    (normalized) name match — substring matching is too easy to get
+    wrong (e.g. "Vik" incorrectly matching inside "Reykjavik")."""
+    loc = step.get("location")
+    loc_name = loc.get("name") if isinstance(loc, dict) else None
+    candidates = [c for c in (step.get("name"), loc_name) if c]
+    if not candidates:
+        return None
+
+    target_names = {normalize(c) for c in candidates}
+    for sub in trip_folder.iterdir():
+        if sub.is_dir() and normalize(sub.name) in target_names:
+            return sub
+    return None
+
+
+def images_in_folder(folder: Path, limit=200):
     urls = []
-    for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
-        for f in trip_folder.rglob(ext):
+    for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp", "*.heic"):
+        for f in sorted(folder.rglob(ext)):
             urls.append(str(f))
             if len(urls) >= limit:
                 return urls
     return urls
 
 
+def exif_date(path: Path):
+    """Best-effort EXIF 'date taken' lookup, used only as a last-resort
+    fallback when nothing else tells us which day a photo belongs to."""
+    try:
+        from PIL import Image
+        img = Image.open(path)
+        exif = img.getexif()
+        # DateTimeOriginal (36867) lives in the Exif sub-IFD (tag 0x8769
+        # in the main IFD points to it), not the top-level IFD.
+        exif_ifd = exif.get_ifd(0x8769) if exif else {}
+        for source in (exif_ifd, exif):
+            for tag_id in (36867, 306):  # DateTimeOriginal, DateTime
+                value = source.get(tag_id)
+                if isinstance(value, str) and len(value) >= 10:
+                    # EXIF format: "YYYY:MM:DD HH:MM:SS"
+                    return value[:10].replace(":", "-")
+    except Exception:
+        pass
+    return None
+
+
+def scan_folder_for_photos_by_exif(trip_folder: Path):
+    """Fallback used only if step-based matching found nothing at all:
+    scan every photo in the trip folder and bucket by EXIF date-taken
+    (falls back to file modified time if a photo has no EXIF date)."""
+    days = OrderedDict()
+    for ext in ("*.jpg", "*.jpeg", "*.png", "*.webp"):
+        for f in sorted(trip_folder.rglob(ext)):
+            date_str = exif_date(f)
+            if not date_str:
+                try:
+                    date_str = datetime.fromtimestamp(f.stat().st_mtime, tz=timezone.utc).strftime("%Y-%m-%d")
+                except Exception:
+                    date_str = "unsorted"
+            days.setdefault(date_str, {"title": "", "description": "", "photos": []})
+            days[date_str]["photos"].append(str(f))
+    return days
+
+
 def group_steps_by_day(trip, trip_folder: Path):
     """Returns an ordered dict: date string -> {title, description, photos[]}"""
     days = OrderedDict()
-    steps = trip.get("steps", []) or []
+    # Polarsteps' export field is "all_steps" — some older/alternate
+    # exports may use "steps" instead, so we check both.
+    steps = trip.get("all_steps") or trip.get("steps") or []
     steps = sorted(steps, key=lambda s: s.get("start_time") or s.get("time") or 0)
+
+    matched_any_photo = False
 
     for step in steps:
         ts = step.get("start_time") or step.get("time")
@@ -126,7 +196,14 @@ def group_steps_by_day(trip, trip_folder: Path):
         loc_name = loc.get("name") if isinstance(loc, dict) else None
         title = step.get("name") or loc_name or ""
         description = step.get("description") or ""
+
         photos = step_photos(step)
+        if not photos:
+            subfolder = find_step_subfolder(trip_folder, step)
+            if subfolder:
+                photos = images_in_folder(subfolder)
+        if photos:
+            matched_any_photo = True
 
         if date_str not in days:
             days[date_str] = {"title": title, "description": description, "photos": []}
@@ -137,12 +214,19 @@ def group_steps_by_day(trip, trip_folder: Path):
                 days[date_str]["description"] = description
         days[date_str]["photos"].extend(photos)
 
-    # Fallback: no steps/photos found via JSON — just dump any images found
-    # in the folder into a single unlabelled "day" so nothing is lost.
+    # If we found steps/dates but genuinely no photos could be matched to
+    # any of them, fall back to EXIF-date grouping across the whole
+    # folder rather than dumping everything under one label.
+    if steps and not matched_any_photo:
+        exif_days = scan_folder_for_photos_by_exif(trip_folder)
+        if exif_days:
+            return exif_days
+
+    # No steps at all (unexpected export format) — same EXIF fallback.
     if not days:
-        found = scan_folder_for_photos(trip_folder)
-        if found:
-            days["unknown"] = {"title": "", "description": "", "photos": found}
+        exif_days = scan_folder_for_photos_by_exif(trip_folder)
+        if exif_days:
+            return exif_days
 
     return days
 
