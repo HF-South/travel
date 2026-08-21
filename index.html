@@ -404,6 +404,29 @@
   }
   a.hike-row-link:hover .hike-open{ color:var(--accent-amber); }
 
+  /* ---------- Dives ---------- */
+  #dives-list{ display:flex; flex-direction:column; gap:12px; }
+  .dive-row{
+    border:1px solid var(--line-topo);
+    border-radius:6px;
+    background:var(--bg-panel);
+    padding:18px 22px;
+    display:flex; align-items:center; justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+  }
+  .dive-main h3{
+    font-family:var(--font-display);
+    font-weight:500;
+    font-size:1.1rem;
+    margin:0;
+  }
+  .dive-meta{ font-size:0.78rem; color:var(--text-muted); }
+  .dive-notes{ margin:8px 0 0; font-size:0.85rem; color:var(--text-muted); max-width:48ch; }
+  .dive-stats{ display:flex; gap:22px; }
+  .dive-stats div{ text-align:right; }
+  .dive-stats span{ display:block; font-family:var(--font-mono); font-size:1rem; color:var(--accent-moss); }
+  .dive-stats label{ display:block; font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
+
   .empty{ color:var(--text-muted); font-style:italic; }
 
   footer{
@@ -421,6 +444,8 @@
     nav{ flex-wrap:wrap; }
     .hike-row{ flex-direction:column; align-items:flex-start; }
     .hike-stats{ gap:16px; }
+    .dive-row{ flex-direction:column; align-items:flex-start; }
+    .dive-stats{ gap:16px; }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -438,6 +463,7 @@
       <a href="#map" class="nav-link" data-target="map">Map</a>
       <a href="#trips" class="nav-link" data-target="trips">Trips</a>
       <a href="#hikes" class="nav-link" data-target="hikes">Hikes</a>
+      <a href="#dives" class="nav-link" data-target="dives">Dives</a>
     </nav>
   </div>
 </header>
@@ -489,6 +515,20 @@
   <section id="trip-detail" class="page-section">
     <a href="#trips" class="back-link">← All trips</a>
     <div id="trip-detail-content"></div>
+  </section>
+
+  <!-- DIVES -->
+  <section id="dives" class="page-section">
+    <div class="eyebrow">Logbook · synced from your spreadsheet</div>
+    <h1>Dives.</h1>
+    <p class="lede">Every dive logged — depth, time, temperature, and where you found it.</p>
+    <div class="stats-strip" style="margin-bottom:36px;">
+      <div class="stat-cell"><span id="stat-dives">0</span><label>Dives logged</label></div>
+      <div class="stat-cell"><span id="stat-max-depth">0</span><label>Max depth (m)</label></div>
+      <div class="stat-cell"><span id="stat-dive-time">0</span><label>Hours underwater</label></div>
+      <div class="stat-cell"><span id="stat-avg-temp">—</span><label>Avg water temp</label></div>
+    </div>
+    <div id="dives-list"></div>
   </section>
 
   <!-- HIKES -->
