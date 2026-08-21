@@ -533,9 +533,58 @@ function renderHikes() {
   });
 }
 
+/* ---------------- Dives ---------------- */
+
+function renderDives() {
+  const wrap = document.getElementById("dives-list");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const dives = [...(SITE_DATA.dives || [])].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  const totalDives = dives.length;
+  const maxDepth = dives.reduce((m, d) => Math.max(m, d.depthM || 0), 0);
+  const totalMin = dives.reduce((s, d) => s + (d.durationMin || 0), 0);
+  const avgTemp = dives.length ? dives.reduce((s, d) => s + (d.waterTempC || 0), 0) / dives.filter(d => d.waterTempC).length : 0;
+
+  const statDives = document.getElementById("stat-dives");
+  const statMaxDepth = document.getElementById("stat-max-depth");
+  const statDiveTime = document.getElementById("stat-dive-time");
+  const statAvgTemp = document.getElementById("stat-avg-temp");
+  if (statDives) statDives.textContent = totalDives;
+  if (statMaxDepth) statMaxDepth.textContent = fmt(maxDepth, 1);
+  if (statDiveTime) statDiveTime.textContent = fmt(totalMin / 60, totalMin < 6000 ? 1 : 0);
+  if (statAvgTemp) statAvgTemp.textContent = avgTemp ? fmt(avgTemp, 1) : "—";
+
+  if (dives.length === 0) {
+    wrap.innerHTML = `<p class="empty">No dives yet — run update_dives.py to pull from your spreadsheet.</p>`;
+    return;
+  }
+
+  const hasVisibility = dives.some(d => d.visibilityM);
+
+  dives.forEach(d => {
+    const row = document.createElement("article");
+    row.className = "dive-row";
+    row.innerHTML = `
+      <div class="dive-main">
+        <h3>${d.site || "Untitled dive site"}</h3>
+        <span class="dive-meta">${d.date || "Date unknown"}${d.location ? " · " + d.location : ""}${d.buddy ? " · with " + d.buddy : ""}</span>
+        ${d.notes ? `<p class="dive-notes">${d.notes}</p>` : ""}
+      </div>
+      <div class="dive-stats">
+        <div><span>${d.depthM ? fmt(d.depthM, 1) : "—"}</span><label>m depth</label></div>
+        <div><span>${d.durationMin ? fmt(d.durationMin) : "—"}</span><label>min</label></div>
+        <div><span>${d.waterTempC ? fmt(d.waterTempC, 1) + "°" : "—"}</span><label>water</label></div>
+        ${hasVisibility ? `<div><span>${d.visibilityM ? fmt(d.visibilityM) : "—"}</span><label>m vis</label></div>` : ""}
+      </div>
+    `;
+    wrap.appendChild(row);
+  });
+}
+
 /* ---------------- Router ---------------- */
 
-const STATIC_SECTIONS = ["home", "map", "trips", "hikes"];
+const STATIC_SECTIONS = ["home", "map", "trips", "hikes", "dives"];
 
 function showSection(id) {
   document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
@@ -573,6 +622,7 @@ function initSite() {
   renderMap();
   renderTrips();
   renderHikes();
+  renderDives();
 
   window.addEventListener("hashchange", route);
   route();
