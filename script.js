@@ -275,6 +275,41 @@ function renderStats() {
   if (pctEl) pctEl.textContent = fmt(percent, percent < 10 ? 2 : 1) + "%";
 
   renderWorldProgress(countedCountries.length, percent);
+  renderLastSynced();
+}
+
+function relativeTimeFromNow(isoString) {
+  if (!isoString) return null;
+  const then = new Date(isoString).getTime();
+  if (isNaN(then)) return null;
+  const diffSec = Math.round((Date.now() - then) / 1000);
+
+  const units = [
+    ["year", 31536000], ["month", 2592000], ["week", 604800],
+    ["day", 86400], ["hour", 3600], ["minute", 60],
+  ];
+  for (const [name, secs] of units) {
+    const val = Math.floor(diffSec / secs);
+    if (val >= 1) return `${val} ${name}${val === 1 ? "" : "s"} ago`;
+  }
+  return diffSec < 10 ? "just now" : `${diffSec} seconds ago`;
+}
+
+function renderLastSynced() {
+  const el = document.getElementById("last-synced");
+  if (!el) return;
+  const meta = SITE_DATA.meta;
+  const rel = meta && relativeTimeFromNow(meta.lastUpdated);
+
+  if (!rel) {
+    el.innerHTML = "";
+    return;
+  }
+
+  // "stale" after 30 days, just a visual nudge that a sync might be overdue
+  const daysSince = meta.lastUpdated ? (Date.now() - new Date(meta.lastUpdated).getTime()) / 86400000 : Infinity;
+  el.classList.toggle("stale", daysSince > 30);
+  el.innerHTML = `<span class="sync-dot"></span>Synced ${rel}`;
 }
 
 function renderWorldProgress(count, percent) {
@@ -317,6 +352,8 @@ function renderCountryList() {
   SITE_DATA.countries.forEach((name) => {
     const li = document.createElement("li");
     li.textContent = name;
+    li.style.cursor = "pointer";
+    li.addEventListener("click", () => showCountryDetail(name));
     if (!COUNTRY_COORDS[name]) li.classList.add("no-pin");
     list.appendChild(li);
   });
@@ -373,6 +410,7 @@ function initMap() {
     points.forEach(p => {
       const el = document.createElement("div");
       el.className = "map-pin-marker";
+      el.addEventListener("click", () => showCountryDetail(p.name));
       new maplibregl.Marker({ element: el })
         .setLngLat([p.lng, p.lat])
         .setPopup(new maplibregl.Popup({ offset: 14, closeButton: false }).setText(p.name))
@@ -385,18 +423,62 @@ function initMap() {
         new maplibregl.LngLatBounds([points[0].lng, points[0].lat], [points[0].lng, points[0].lat])
       );
       mapInstance.fitBounds(bounds, { padding: 60, maxZoom: 5, duration: 0 });
+      showCountryDetail(points[0].name);
     } else if (SITE_DATA.countries.length > 0) {
       console.warn("None of your countries matched COUNTRY_COORDS in script.js — add coordinates there to see pins.");
     }
   });
 }
 
+/* ---------------- Country detail (click-through on the home map) ----------------
+   Shows every trip, hike, and dive tied to a given country inline, so the
+   map itself becomes the way you browse everything — not just a decoration. */
+
+function matchesCountry(fieldValue, country) {
+  if (!fieldValue) return false;
+  return fieldValue.toLowerCase().includes(country.toLowerCase());
+}
+
+function showCountryDetail(country) {
+  const panel = document.getElementById("country-detail-panel");
+  if (!panel) return;
+
+  const trips = (SITE_DATA.trips || []).filter(t => matchesCountry(t.country, country));
+  const hikes = (SITE_DATA.hikes || []).filter(h => matchesCountry(h.country, country));
+  const dives = (SITE_DATA.dives || []).filter(d => matchesCountry(d.location, country));
+
+  const tripsHtml = trips.length
+    ? trips.map((t) => {
+        const idx = SITE_DATA.trips.indexOf(t);
+        return `<div class="cd-row"><a href="#trip/${idx}">${t.title}</a><span class="cd-meta">${t.year || ""}</span></div>`;
+      }).join("")
+    : `<p class="cd-empty">No trips logged here yet.</p>`;
+
+  const hikesHtml = hikes.length
+    ? hikes.map(h => `<div class="cd-row"><span>${h.url ? `<a href="${h.url}" target="_blank" rel="noopener">${h.name}</a>` : h.name}</span><span class="cd-meta">${h.date || ""} · ${fmt(h.distanceKm, 1)}km</span></div>`).join("")
+    : `<p class="cd-empty">No hikes logged here yet.</p>`;
+
+  const divesHtml = dives.length
+    ? `<p class="cd-empty" style="font-style:normal; color:var(--text-muted);">${dives.length} dive${dives.length === 1 ? "" : "s"} logged here — see the Dives tab for details.</p>`
+    : `<p class="cd-empty">No dives logged here yet.</p>`;
+
+  panel.innerHTML = `
+    <div class="country-detail-card">
+      <h2>${country}</h2>
+      <div class="cd-section"><span class="cd-section-label">Trips</span>${tripsHtml}</div>
+      <div class="cd-section"><span class="cd-section-label">Hikes</span>${hikesHtml}</div>
+      <div class="cd-section"><span class="cd-section-label">Dives</span>${divesHtml}</div>
+    </div>
+  `;
+}
+
 function renderMap() {
   renderCountryList();
   // MapLibre needs a sized, visible container to initialise correctly.
   // It's safe to call this repeatedly — it only creates the map once,
-  // and route() below calls resize() every time the Map tab is opened.
-  if (document.getElementById("map").classList.contains("active")) {
+  // and route() calls resize() every time the Home tab (which now
+  // contains the map) is opened.
+  if (document.getElementById("home").classList.contains("active")) {
     initMap();
   }
 }
@@ -657,6 +739,47 @@ function renderHikes() {
 
 /* ---------------- Dives ---------------- */
 
+/* ---------------- Dive depth profile ----------------
+   Your spreadsheet only logs average depth + total duration, not a real
+   second-by-second sensor trace — so this synthesizes a realistic-looking
+   recreational dive shape (descent, bottom time, ascent, safety stop) from
+   those two numbers. It's illustrative, not real telemetry, and is labelled
+   as such wherever it's shown. */
+
+function buildDiveProfilePoints(depthM, durationMin) {
+  if (!depthM || !durationMin) return null;
+
+  // fractional (time 0-1, depth 0-1 relative to depthM) keyframes for a
+  // typical recreational profile
+  const safetyStop = depthM > 10;
+  const keyframes = safetyStop
+    ? [[0, 0], [0.08, 0.85], [0.16, 1], [0.45, 0.97], [0.72, 1.02], [0.80, 0.55], [0.90, 0.32], [0.96, 0.30], [1, 0]]
+    : [[0, 0], [0.10, 0.85], [0.20, 1], [0.55, 0.96], [0.85, 1.0], [1, 0]];
+
+  return keyframes.map(([t, d]) => ({ t, depth: Math.max(0, d * depthM) }));
+}
+
+function diveProfileSvg(depthM, durationMin, width = 300, height = 64) {
+  const points = buildDiveProfilePoints(depthM, durationMin);
+  if (!points) return "";
+
+  const padTop = 6, padBottom = 4;
+  const maxDepth = depthM * 1.08;
+  const toX = t => (t * (width - 2)) + 1;
+  const toY = d => padTop + (d / maxDepth) * (height - padTop - padBottom);
+
+  const linePts = points.map(p => `${toX(p.t).toFixed(1)},${toY(p.depth).toFixed(1)}`).join(" ");
+  const areaPts = `1,${(height - padBottom).toFixed(1)} ${linePts} ${width - 1},${(height - padBottom).toFixed(1)}`;
+
+  return `
+    <svg class="dive-profile-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="${areaPts}" fill="rgba(124,160,133,0.14)"></polygon>
+      <polyline points="${linePts}" fill="none" stroke="#7CA085" stroke-width="1.6" stroke-linejoin="round"></polyline>
+      <line x1="1" y1="${padTop - 2}" x2="${width - 1}" y2="${padTop - 2}" stroke="#24312C" stroke-width="1" stroke-dasharray="2 3"></line>
+    </svg>
+  `;
+}
+
 function renderDives() {
   const wrap = document.getElementById("dives-list");
   if (!wrap) return;
@@ -687,6 +810,7 @@ function renderDives() {
   dives.forEach(d => {
     const row = document.createElement("article");
     row.className = "dive-row";
+    const profile = diveProfileSvg(d.depthM, d.durationMin);
     row.innerHTML = `
       <div class="dive-main">
         <h3>${d.site || "Untitled dive site"}</h3>
@@ -699,6 +823,12 @@ function renderDives() {
         <div><span>${d.waterTempC ? fmt(d.waterTempC, 1) + "°" : "—"}</span><label>water</label></div>
         ${hasVisibility ? `<div><span>${d.visibilityM ? fmt(d.visibilityM) : "—"}</span><label>m vis</label></div>` : ""}
       </div>
+      ${profile ? `
+        <div class="dive-profile">
+          ${profile}
+          <span class="dive-profile-caption">Approximate profile — from avg. depth &amp; duration, not raw sensor data</span>
+        </div>
+      ` : ""}
     `;
     wrap.appendChild(row);
   });
@@ -706,7 +836,7 @@ function renderDives() {
 
 /* ---------------- Router ---------------- */
 
-const STATIC_SECTIONS = ["home", "map", "trips", "hikes", "dives", "contact", "social", "divemap"];
+const STATIC_SECTIONS = ["home", "trips", "hikes", "dives", "contact", "social", "divemap"];
 
 function showSection(id) {
   document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
@@ -716,23 +846,28 @@ function showSection(id) {
 
 function route() {
   const hash = location.hash.replace("#", "");
+  let resolved;
   if (hash.startsWith("trip/")) {
     const idx = parseInt(hash.split("/")[1], 10);
     renderTripDetail(idx);
     showSection("trip-detail");
+    resolved = "trip-detail";
   } else if (STATIC_SECTIONS.includes(hash)) {
     showSection(hash);
+    resolved = hash;
   } else {
     showSection("home");
+    resolved = "home";
   }
 
-  if (hash === "map") {
+  if (resolved === "home") {
+    // the world map lives on the homepage now
     initMap();
     // container was hidden (display:none) until just now, so MapLibre
     // needs a resize once it has real dimensions to measure.
     setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 0);
   }
-  if (hash === "divemap") {
+  if (resolved === "divemap") {
     initDiveMap();
     setTimeout(() => { if (diveMapInstance) diveMapInstance.resize(); }, 0);
   }
