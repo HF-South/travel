@@ -90,6 +90,21 @@
   #status-msg.error{ color:var(--accent-rust); }
   #app{ display:none; }
   code{ background:var(--bg-raised); padding:1px 5px; border-radius:3px; font-size:0.85em; }
+
+  .map-pin-marker{
+    width:16px; height:16px; border-radius:50%;
+    background:var(--accent-amber);
+    box-shadow:0 0 0 6px rgba(232,163,61,0.18);
+    border:2px solid var(--bg-void);
+  }
+  .maplibregl-ctrl-group{
+    background:var(--bg-panel) !important;
+    border:1px solid var(--line-topo) !important;
+    box-shadow:none !important;
+  }
+  .maplibregl-ctrl-group button{ background:transparent !important; }
+  .maplibregl-ctrl-attrib{ background:rgba(11,15,14,0.7) !important; color:var(--text-faint) !important; }
+  .maplibregl-ctrl-attrib a{ color:var(--text-muted) !important; }
 </style>
 </head>
 <body>
@@ -140,6 +155,7 @@
       <button class="tab-btn" data-tab="trips">Trips</button>
       <button class="tab-btn" data-tab="hikes">Hikes</button>
       <button class="tab-btn" data-tab="dives">Dives</button>
+      <button class="tab-btn" data-tab="divemap">Dive Map</button>
     </div>
 
     <!-- COUNTRIES -->
@@ -220,6 +236,10 @@
           <div class="form-row"><label>Dive site</label><input type="text" id="dive-site"></div>
           <div class="form-row"><label>Buddy</label><input type="text" id="dive-buddy"></div>
         </div>
+        <div class="form-row">
+          <label>Linked pin on Dive Map <span style="text-transform:none; letter-spacing:0;">(optional — set these up in the Dive Map tab)</span></label>
+          <select id="dive-siteid"><option value="">— not linked —</option></select>
+        </div>
         <div class="row-2">
           <div class="form-row"><label>Depth (m)</label><input type="number" step="0.1" id="dive-depth"></div>
           <div class="form-row"><label>Duration (min)</label><input type="number" id="dive-duration"></div>
@@ -235,6 +255,17 @@
       <div id="dives-list"></div>
     </div>
 
+    <!-- DIVE MAP -->
+    <div class="tab-panel" id="tab-divemap">
+      <div class="panel">
+        <h2>Dive site pins</h2>
+        <p class="hint">Click anywhere on the map to drop a new pin and name that dive site. Click an existing pin to manage it below — rename it, delete it, or pick which logged dives belong there. Since you sometimes dive the same spot more than once, one pin can have many dives linked to it.</p>
+        <div id="admin-divemap-container" style="width:100%; height:420px; border-radius:6px; overflow:hidden; background:var(--bg-void);"></div>
+      </div>
+      <div id="divesites-list"></div>
+      <div class="panel" id="divesite-link-panel" style="display:none;"></div>
+    </div>
+
     <div class="panel">
       <button class="primary" id="save-github-btn">Save all changes to GitHub</button>
       <p id="status-msg"></p>
@@ -242,6 +273,9 @@
   </div>
 
 </main>
+
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
+<script src="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.js"></script>
 
 <script src="admin.js"></script>
 </body>
