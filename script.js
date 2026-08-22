@@ -1,7 +1,12 @@
+/* SITE_DATA is loaded async from data.json — see initSite() at the bottom
+   of this file. Everything else here assumes it's already populated by
+   the time render functions run. */
+let SITE_DATA = null;
+
 /* ============================================================
    Country centroid lookup (lat, lng) for placing map pins.
    Covers ~110 commonly-visited countries. If a country in your
-   data.js list isn't showing a pin, add it here — just find its
+   data.json list isn't showing a pin, add it here — just find its
    rough centroid coordinates and add a line in the same format.
    ============================================================ */
 const COUNTRY_COORDS = {
@@ -251,7 +256,7 @@ function slugify(str, idx) {
 /* ---------------- Stats ---------------- */
 
 function renderStats() {
-  const { countries, hikes, trips } = SITE_DATA;
+  const { countries, hikes, trips, dives } = SITE_DATA;
   const totalKm = hikes.reduce((s, h) => s + (h.distanceKm || 0), 0);
   const totalUp = hikes.reduce((s, h) => s + (h.elevationUp || 0), 0);
   const countedCountries = countries.filter(c => !TERRITORY_NAMES.has(c));
@@ -260,6 +265,7 @@ function renderStats() {
   document.getElementById("stat-countries").textContent = countries.length;
   document.getElementById("stat-trips").textContent = trips.length;
   document.getElementById("stat-hikes").textContent = hikes.length;
+  document.getElementById("stat-dives-home").textContent = (dives || []).length;
   document.getElementById("stat-km").textContent = fmt(totalKm, totalKm < 100 ? 1 : 0);
   document.getElementById("stat-elevation").textContent = fmt(totalUp);
   const pctEl = document.getElementById("stat-percent");
@@ -584,7 +590,7 @@ function renderDives() {
 
 /* ---------------- Router ---------------- */
 
-const STATIC_SECTIONS = ["home", "map", "trips", "hikes", "dives"];
+const STATIC_SECTIONS = ["home", "map", "trips", "hikes", "dives", "contact"];
 
 function showSection(id) {
   document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
@@ -612,9 +618,107 @@ function route() {
   }
 }
 
+/* ---------------- Contact form ----------------
+   Sends the message straight to a Discord channel via a webhook —
+   no backend needed. IMPORTANT: read the note in README.md about
+   what this does and doesn't protect against before relying on it —
+   a webhook URL embedded in a static site's JS is visible to anyone
+   who looks, since there's no server to hide it behind. */
+
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/test/token"; // paste your Discord webhook URL here — see README.md
+
+function initContactForm() {
+  const form = document.getElementById("contact-form");
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const statusEl = document.getElementById("contact-status");
+    const submitBtn = document.getElementById("contact-submit");
+    statusEl.textContent = "";
+    statusEl.className = "contact-status";
+
+    // Honeypot: if this hidden field got filled in, silently drop it
+    // (real visitors never see or touch it; bots that auto-fill do).
+    if (form.elements["website"].value.trim() !== "") {
+      statusEl.textContent = "Thanks — message sent.";
+      statusEl.classList.add("ok");
+      form.reset();
+      return;
+    }
+
+    const name = form.elements["name"].value.trim();
+    const email = form.elements["email"].value.trim();
+    const message = form.elements["message"].value.trim();
+
+    if (!DISCORD_WEBHOOK_URL) {
+      statusEl.textContent = "This form isn't set up yet — add a Discord webhook URL in script.js.";
+      statusEl.classList.add("error");
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Sending…";
+
+    try {
+      const res = await fetch(DISCORD_WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          embeds: [{
+            title: "New contact form message",
+            color: 0xE8A33D,
+            fields: [
+              { name: "Name", value: name || "(not given)", inline: true },
+              { name: "Email", value: email || "(not given)", inline: true },
+              { name: "Message", value: message.slice(0, 1000) },
+            ],
+            timestamp: new Date().toISOString(),
+          }],
+        }),
+      });
+
+      if (res.ok || res.status === 204) {
+        statusEl.textContent = "Thanks — message sent.";
+        statusEl.classList.add("ok");
+        form.reset();
+      } else {
+        throw new Error("Discord responded with " + res.status);
+      }
+    } catch (err) {
+      console.error("Contact form send failed:", err);
+      statusEl.textContent = "Something went wrong sending that — try again in a moment.";
+      statusEl.classList.add("error");
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send message";
+    }
+  });
+}
+
 /* ---------------- Init ---------------- */
 
-function initSite() {
+async function loadSiteData() {
+  const res = await fetch("data.json");
+  if (!res.ok) throw new Error("Couldn't load data.json (" + res.status + ")");
+  return res.json();
+}
+
+async function initSite() {
+  try {
+    SITE_DATA = await loadSiteData();
+  } catch (err) {
+    console.error("Failed to load data.json:", err);
+    document.body.innerHTML = `
+      <div style="max-width:520px; margin:80px auto; padding:24px; font-family:monospace; color:#8B948D; text-align:center;">
+        <p>Couldn't load data.json.</p>
+        <p style="font-size:0.85em;">If you're viewing this file directly (file://), browsers block that for security reasons.
+        Run a local server instead — e.g. <code>python3 -m http.server</code> in this folder, then open
+        <code>http://localhost:8000</code>. This works automatically once hosted on GitHub Pages.</p>
+      </div>`;
+    return;
+  }
+
   document.getElementById("wm-name").textContent = SITE_DATA.profile?.name ? SITE_DATA.profile.name + "'s Log" : "Field Log";
   if (SITE_DATA.profile?.tagline) document.getElementById("hero-tagline").textContent = SITE_DATA.profile.tagline;
 
@@ -623,6 +727,7 @@ function initSite() {
   renderTrips();
   renderHikes();
   renderDives();
+  initContactForm();
 
   window.addEventListener("hashchange", route);
   route();
