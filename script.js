@@ -5,9 +5,11 @@ let SITE_DATA = null;
 
 /* ============================================================
    Country centroid lookup (lat, lng) for placing map pins.
-   Covers ~110 commonly-visited countries. If a country in your
-   data.json list isn't showing a pin, add it here — just find its
-   rough centroid coordinates and add a line in the same format.
+   Covers all UN member states plus a few commonly-tracked
+   territories (Vatican City, Kosovo, Palestine, the Dutch
+   Caribbean islands). If a country in your data.json list still
+   isn't showing a pin, add it here — just find its rough
+   centroid coordinates and add a line in the same format.
    ============================================================ */
 const COUNTRY_COORDS = {
   // Africa
@@ -225,6 +227,7 @@ const COUNTRY_COORDS = {
   "Tuvalu": [-7.1, 177.6], // TV
   "Vanuatu": [-15.4, 166.9], // VU
 };
+
 
 /* Total countries used as the denominator for the "% of the world explored"
    stat. 195 = the 193 UN member states + Vatican City + Palestine, which
@@ -625,7 +628,7 @@ function route() {
    a webhook URL embedded in a static site's JS is visible to anyone
    who looks, since there's no server to hide it behind. */
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539478420403126323/WUD6gJcBeUt8jXSdocQlqW1Xu-XwSbljpTGOFWVE97QUtodSFoqU2f0043VSf3quIL6s"; // paste your Discord webhook URL here — see README.md
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/test/token"; // paste your Discord webhook URL here — see README.md
 
 function initContactForm() {
   const form = document.getElementById("contact-form");
@@ -705,6 +708,9 @@ async function loadSiteData() {
 }
 
 async function initSite() {
+  const loaderStart = Date.now();
+  const MIN_LOADER_MS = 5000;
+
   try {
     SITE_DATA = await loadSiteData();
   } catch (err) {
@@ -731,6 +737,19 @@ async function initSite() {
 
   window.addEventListener("hashchange", route);
   route();
+
+  // Keep the loader up for at least MIN_LOADER_MS total, even if data
+  // loaded faster than that — then fade it out.
+  const elapsed = Date.now() - loaderStart;
+  const remaining = Math.max(0, MIN_LOADER_MS - elapsed);
+  setTimeout(hideLoader, remaining);
+}
+
+function hideLoader() {
+  const loader = document.getElementById("loader");
+  if (!loader) return;
+  loader.classList.add("hidden");
+  setTimeout(() => loader.remove(), 600);
 }
 
 if (document.readyState === "loading") {
