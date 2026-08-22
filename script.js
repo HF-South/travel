@@ -401,6 +401,119 @@ function renderMap() {
   }
 }
 
+/* ---------------- Dive Map (public) ---------------- */
+
+let diveMapInstance = null;
+let diveMapMarkers = {}; // siteId -> marker element
+
+function showDiveMapFallback() {
+  const el = document.getElementById("divemap-fallback");
+  if (el) el.classList.add("show");
+}
+function hideDiveMapFallback() {
+  const el = document.getElementById("divemap-fallback");
+  if (el) el.classList.remove("show");
+}
+
+function divesForSite(siteId) {
+  return (SITE_DATA.dives || []).filter(d => d.siteId === siteId);
+}
+
+function renderDiveSitePanel(siteId) {
+  const panel = document.getElementById("divesite-panel");
+  if (!panel) return;
+  const site = (SITE_DATA.diveSites || []).find(s => s.id === siteId);
+  if (!site) { panel.innerHTML = ""; return; }
+
+  const dives = divesForSite(siteId).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  panel.innerHTML = `
+    <div class="divesite-card">
+      <h2>${site.name}</h2>
+      <div class="divesite-meta">${site.location || ""} · ${dives.length} dive${dives.length === 1 ? "" : "s"} logged here</div>
+      ${dives.length === 0 ? `<p class="empty">No dives linked to this site yet.</p>` : dives.map(d => `
+        <div class="divesite-dive-row">
+          <span class="ddate">${d.date || "Date unknown"}${d.buddy ? " · with " + d.buddy : ""}</span>
+          <span class="dstats">
+            <span>${d.depthM ? fmt(d.depthM, 1) + "m" : "—"}</span>
+            <span>${d.durationMin ? fmt(d.durationMin) + "min" : "—"}</span>
+            <span>${d.waterTempC ? fmt(d.waterTempC, 1) + "°" : "—"}</span>
+          </span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function setActiveDiveMarker(siteId) {
+  Object.entries(diveMapMarkers).forEach(([id, el]) => {
+    el.classList.toggle("active", id === siteId);
+  });
+}
+
+function initDiveMap() {
+  if (diveMapInstance || typeof maplibregl === "undefined") {
+    if (typeof maplibregl === "undefined") showDiveMapFallback();
+    return;
+  }
+
+  diveMapInstance = new maplibregl.Map({
+    container: "divemap-container",
+    style: "https://tiles.openfreemap.org/styles/liberty",
+    center: [10, 20],
+    zoom: 1.4,
+    attributionControl: true,
+  });
+  diveMapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+  const loadTimeout = setTimeout(showDiveMapFallback, 8000);
+  diveMapInstance.on("error", (e) => {
+    console.error("Dive map failed to load:", e && e.error);
+    showDiveMapFallback();
+  });
+
+  diveMapInstance.on("load", () => {
+    clearTimeout(loadTimeout);
+    hideDiveMapFallback();
+    renderDiveMapMarkers();
+  });
+}
+
+function renderDiveMapMarkers() {
+  if (!diveMapInstance) return;
+  diveMapMarkers = {};
+  const sites = SITE_DATA.diveSites || [];
+
+  sites.forEach(site => {
+    const el = document.createElement("div");
+    el.className = "divemap-marker";
+    el.addEventListener("click", () => {
+      setActiveDiveMarker(site.id);
+      renderDiveSitePanel(site.id);
+    });
+    new maplibregl.Marker({ element: el }).setLngLat([site.lng, site.lat]).addTo(diveMapInstance);
+    diveMapMarkers[site.id] = el;
+  });
+
+  if (sites.length > 0) {
+    const bounds = sites.reduce(
+      (b, s) => b.extend([s.lng, s.lat]),
+      new maplibregl.LngLatBounds([sites[0].lng, sites[0].lat], [sites[0].lng, sites[0].lat])
+    );
+    diveMapInstance.fitBounds(bounds, { padding: 60, maxZoom: 8, duration: 0 });
+    setActiveDiveMarker(sites[0].id);
+    renderDiveSitePanel(sites[0].id);
+  } else {
+    document.getElementById("divesite-panel").innerHTML = `<p class="empty">No dive sites pinned yet — add some from the admin panel.</p>`;
+  }
+}
+
+function renderDiveMap() {
+  if (document.getElementById("divemap").classList.contains("active")) {
+    initDiveMap();
+  }
+}
+
 /* ---------------- Trips ---------------- */
 
 function renderTrips() {
@@ -593,7 +706,7 @@ function renderDives() {
 
 /* ---------------- Router ---------------- */
 
-const STATIC_SECTIONS = ["home", "map", "trips", "hikes", "dives", "contact"];
+const STATIC_SECTIONS = ["home", "map", "trips", "hikes", "dives", "contact", "social", "divemap"];
 
 function showSection(id) {
   document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
@@ -619,6 +732,10 @@ function route() {
     // needs a resize once it has real dimensions to measure.
     setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 0);
   }
+  if (hash === "divemap") {
+    initDiveMap();
+    setTimeout(() => { if (diveMapInstance) diveMapInstance.resize(); }, 0);
+  }
 }
 
 /* ---------------- Contact form ----------------
@@ -628,7 +745,7 @@ function route() {
    a webhook URL embedded in a static site's JS is visible to anyone
    who looks, since there's no server to hide it behind. */
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539478420403126323/WUD6gJcBeUt8jXSdocQlqW1Xu-XwSbljpTGOFWVE97QUtodSFoqU2f0043VSf3quIL6s"; // paste your Discord webhook URL here — see README.md
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539478420403126323/WUD6gJcBeUt8jXSdocQlqW1Xu-XwSbljpTGOFWVE97QUtodSFoqU2f0043VSf3quIL6s"; // see README.md for security notes on this
 
 function initContactForm() {
   const form = document.getElementById("contact-form");
