@@ -264,6 +264,8 @@ def dive_to_entry(d):
 
 
 def update_data_json(new_dives, path="data.json"):
+    from datetime import datetime, timezone
+
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
@@ -274,6 +276,12 @@ def update_data_json(new_dives, path="data.json"):
 
     kept = [d for d in data["dives"] if d.get("source") != "spreadsheet"]
     data["dives"] = kept + new_dives
+
+    now = datetime.now(timezone.utc).isoformat()
+    data.setdefault("meta", {"lastUpdated": None, "lastSynced": {}})
+    data["meta"].setdefault("lastSynced", {})
+    data["meta"]["lastSynced"]["dives"] = now
+    data["meta"]["lastUpdated"] = now
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
