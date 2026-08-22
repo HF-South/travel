@@ -90,11 +90,19 @@ def tour_to_entry(t):
 
 
 def update_data_json(new_hikes, path="data.json"):
+    from datetime import datetime, timezone
+
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     kept = [h for h in data.get("hikes", []) if h.get("source") != "komoot"]
     data["hikes"] = kept + new_hikes
+
+    now = datetime.now(timezone.utc).isoformat()
+    data.setdefault("meta", {"lastUpdated": None, "lastSynced": {}})
+    data["meta"].setdefault("lastSynced", {})
+    data["meta"]["lastSynced"]["komoot"] = now
+    data["meta"]["lastUpdated"] = now
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
