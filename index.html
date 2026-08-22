@@ -47,6 +47,13 @@
     --accent-amber-dim: #6b5427;
     --accent-moss: #7CA085;
     --accent-rust: #C2703F;
+    /* "depth" accent — everything to do with diving shifts into this cooler,
+       water-toned register, while hiking/trail content stays in the amber/
+       moss "land" register above. The split is deliberate: it's the same
+       visual logic as a topo map's contour lines vs. a dive gauge's
+       pressure rings — same idea, opposite direction. */
+    --accent-depth: #4FA8B8;
+    --accent-depth-dim: #2C5F68;
     --font-display: "Fraunces", serif;
     --font-body: "Inter", sans-serif;
     --font-mono: "JetBrains Mono", monospace;
@@ -154,6 +161,11 @@
   .eyebrow::before{
     content:""; width:22px; height:1px; background:var(--accent-moss);
   }
+  .eyebrow-icon{ width:16px; height:16px; flex-shrink:0; }
+  .eyebrow-depth{ color:var(--accent-depth); }
+  .eyebrow-depth::before{ background:var(--accent-depth); }
+  .eyebrow-land{ color:var(--accent-amber); }
+  .eyebrow-land::before{ background:var(--accent-amber); }
 
   h1{
     font-family:var(--font-display);
@@ -186,6 +198,27 @@
     flex-shrink:0;
   }
   .last-synced.stale .sync-dot{ background:var(--text-faint); box-shadow:none; }
+
+  /* ---------- Signature: the horizon ----------
+     The one bold move on the page: above the line reads like a ridgeline
+     (amber/moss, the "on foot" half), below it reads like depth-gauge
+     contour rings fading into water (teal, the "off" — diving — half).
+     Kept low-contrast and behind the text so it stays atmosphere, not noise. */
+  .hero-wrap{ position:relative; }
+  .hero-horizon{
+    position:absolute;
+    top:-10px; left:-24px; right:-24px;
+    width:calc(100% + 48px);
+    height:220px;
+    z-index:0;
+    pointer-events:none;
+  }
+  .horizon-ridge{ fill:var(--accent-moss); opacity:0.10; }
+  .horizon-line{ stroke:var(--accent-amber); stroke-width:1; opacity:0.35; }
+  .horizon-depth{ fill:none; stroke:var(--accent-depth); stroke-width:1; }
+  .hero-wrap > .eyebrow, .hero-wrap > h1, .hero-wrap > .lede, .hero-wrap > .last-synced{
+    position:relative; z-index:1;
+  }
 
   /* ---------- Stats strip ---------- */
   .stats-strip{
@@ -224,6 +257,7 @@
     color:var(--text-faint);
   }
   .trip-stats .stat-cell > span{ font-size:1.3rem; }
+  .stats-strip-depth .stat-cell > span{ color:var(--accent-depth); }
 
   /* ---------- Map ---------- */
   .map-wrap{
@@ -599,7 +633,7 @@
   }
   .dive-stats{ display:flex; gap:22px; }
   .dive-stats div{ text-align:right; }
-  .dive-stats span{ display:block; font-family:var(--font-mono); font-size:1rem; color:var(--accent-moss); }
+  .dive-stats span{ display:block; font-family:var(--font-mono); font-size:1rem; color:var(--accent-depth); }
   .dive-stats label{ display:block; font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
 
   .divesite-panel{ margin-top:20px; }
@@ -651,8 +685,8 @@
   .divesite-dive-row .dstats{ display:flex; gap:14px; font-family:var(--font-mono); font-size:0.8rem; color:var(--accent-moss); }
   .divemap-marker{
     width:14px; height:14px; border-radius:50%;
-    background:var(--accent-moss);
-    box-shadow:0 0 0 6px rgba(124,160,133,0.18);
+    background:var(--accent-depth);
+    box-shadow:0 0 0 6px rgba(79,168,184,0.2);
     border:2px solid var(--bg-void);
     cursor:pointer;
   }
@@ -880,10 +914,23 @@
 
   <!-- HOME (the map is the front door now — click a country to see everything that happened there) -->
   <section id="home" class="page-section">
-    <div class="eyebrow">Personal travel log</div>
-    <h1 id="hero-title">Everywhere I've <em>been</em>, on foot and off.</h1>
-    <p class="lede" id="hero-tagline">A running record of trips taken, countries crossed, and trails walked.</p>
-    <p id="last-synced" class="last-synced"></p>
+    <div class="hero-wrap">
+      <svg class="hero-horizon" viewBox="0 0 1200 340" preserveAspectRatio="none" aria-hidden="true">
+        <!-- above the surface: ridgeline -->
+        <path class="horizon-ridge" d="M0,170 L150,88 L280,138 L420,54 L580,124 L750,66 L920,140 L1080,84 L1200,170 L1200,170 L0,170 Z"></path>
+        <line class="horizon-line" x1="0" y1="170" x2="1200" y2="170"></line>
+        <!-- below the surface: depth rings, evenly spaced, fading with depth -->
+        <path class="horizon-depth" d="M0,196 Q600,212 1200,196" style="opacity:0.5"></path>
+        <path class="horizon-depth" d="M0,222 Q600,240 1200,222" style="opacity:0.38"></path>
+        <path class="horizon-depth" d="M0,250 Q600,270 1200,250" style="opacity:0.28"></path>
+        <path class="horizon-depth" d="M0,280 Q600,302 1200,280" style="opacity:0.18"></path>
+        <path class="horizon-depth" d="M0,312 Q600,336 1200,312" style="opacity:0.1"></path>
+      </svg>
+      <div class="eyebrow">Personal travel log</div>
+      <h1 id="hero-title">Everywhere I've <em>been</em>, on foot and off.</h1>
+      <p class="lede" id="hero-tagline">A running record of trips taken, countries crossed, and trails walked.</p>
+      <p id="last-synced" class="last-synced"></p>
+    </div>
 
     <div class="stats-strip">
       <div class="stat-cell"><span id="stat-countries">0</span><label>Countries</label></div>
@@ -930,10 +977,18 @@
 
   <!-- DIVES -->
   <section id="dives" class="page-section">
-    <div class="eyebrow">Logbook · synced from your spreadsheet</div>
+    <div class="eyebrow eyebrow-depth">
+      <svg class="eyebrow-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.4"></circle>
+        <line x1="12" y1="12" x2="12" y2="6" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></line>
+        <line x1="12" y1="12" x2="16" y2="14" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></line>
+        <circle cx="12" cy="12" r="1.4" fill="currentColor"></circle>
+      </svg>
+      Logbook · synced from your spreadsheet
+    </div>
     <h1>Dives.</h1>
     <p class="lede">Every dive logged — depth, time, temperature, and where you found it.</p>
-    <div class="stats-strip" style="margin-bottom:28px;">
+    <div class="stats-strip stats-strip-depth" style="margin-bottom:28px;">
       <div class="stat-cell"><span id="stat-dives">0</span><label>Dives logged</label></div>
       <div class="stat-cell"><span id="stat-max-depth">0</span><label>Max depth (m)</label></div>
       <div class="stat-cell"><span id="stat-dive-time">0</span><label>Hours underwater</label></div>
@@ -962,7 +1017,12 @@
 
   <!-- HIKES -->
   <section id="hikes" class="page-section">
-    <div class="eyebrow">Trail record · synced from Komoot</div>
+    <div class="eyebrow eyebrow-land">
+      <svg class="eyebrow-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M2 19L9 7L13 14L16 9L22 19H2Z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"></path>
+      </svg>
+      Trail record · synced from Komoot
+    </div>
     <h1>Hikes.</h1>
     <p class="lede">Distance, elevation, and time on foot. Click any hike to open the full tour on Komoot.</p>
     <div id="hikes-list"></div>
