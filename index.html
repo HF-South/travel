@@ -429,6 +429,57 @@
 
   .empty{ color:var(--text-muted); font-style:italic; }
 
+  /* ---------- Contact form ---------- */
+  .contact-form{ max-width:520px; display:flex; flex-direction:column; gap:18px; }
+  .form-row{ display:flex; flex-direction:column; gap:6px; }
+  .form-row label{
+    font-family:var(--font-mono);
+    font-size:0.72rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    color:var(--text-muted);
+  }
+  .form-row .optional{ text-transform:none; letter-spacing:0; color:var(--text-faint); }
+  .form-row input, .form-row textarea{
+    background:var(--bg-panel);
+    border:1px solid var(--line-topo);
+    border-radius:4px;
+    padding:10px 12px;
+    color:var(--text-primary);
+    font-family:var(--font-body);
+    font-size:0.95rem;
+    resize:vertical;
+  }
+  .form-row input:focus, .form-row textarea:focus{
+    outline:none;
+    border-color:var(--accent-amber-dim);
+  }
+  .hp-field{
+    position:absolute;
+    left:-9999px;
+    width:1px; height:1px;
+    overflow:hidden;
+  }
+  #contact-submit{
+    align-self:flex-start;
+    background:var(--accent-amber);
+    color:var(--bg-void);
+    border:none;
+    border-radius:4px;
+    padding:12px 24px;
+    font-family:var(--font-mono);
+    font-size:0.8rem;
+    letter-spacing:0.06em;
+    text-transform:uppercase;
+    cursor:pointer;
+    transition:opacity .2s ease;
+  }
+  #contact-submit:hover{ opacity:0.85; }
+  #contact-submit:disabled{ opacity:0.5; cursor:default; }
+  .contact-status{ font-size:0.85rem; margin:0; min-height:1.2em; }
+  .contact-status.ok{ color:var(--accent-moss); }
+  .contact-status.error{ color:var(--accent-rust); }
+
   footer{
     border-top:1px solid var(--line-topo);
     padding:26px 24px;
@@ -464,6 +515,7 @@
       <a href="#trips" class="nav-link" data-target="trips">Trips</a>
       <a href="#hikes" class="nav-link" data-target="hikes">Hikes</a>
       <a href="#dives" class="nav-link" data-target="dives">Dives</a>
+      <a href="#contact" class="nav-link" data-target="contact">Contact</a>
     </nav>
   </div>
 </header>
@@ -481,6 +533,7 @@
       <div class="stat-cell"><span id="stat-percent">0%</span><label>World explored</label></div>
       <div class="stat-cell"><span id="stat-trips">0</span><label>Trips logged</label></div>
       <div class="stat-cell"><span id="stat-hikes">0</span><label>Hikes recorded</label></div>
+      <div class="stat-cell"><span id="stat-dives-home">0</span><label>Dives logged</label></div>
       <div class="stat-cell"><span id="stat-km">0</span><label>Km walked</label></div>
       <div class="stat-cell"><span id="stat-elevation">0</span><label>M climbed</label></div>
     </div>
@@ -539,11 +592,40 @@
     <div id="hikes-list"></div>
   </section>
 
+  <!-- CONTACT -->
+  <section id="contact" class="page-section">
+    <div class="eyebrow">Get in touch</div>
+    <h1>Contact.</h1>
+    <p class="lede">Question about a trip, a hike, or just want to say hi? Send a message.</p>
+    <form id="contact-form" class="contact-form">
+      <div class="form-row">
+        <label for="contact-name">Name</label>
+        <input type="text" id="contact-name" name="name" required maxlength="80" autocomplete="name">
+      </div>
+      <div class="form-row">
+        <label for="contact-email">Email <span class="optional">(optional)</span></label>
+        <input type="email" id="contact-email" name="email" maxlength="120" autocomplete="email">
+      </div>
+      <div class="form-row">
+        <label for="contact-message">Message</label>
+        <textarea id="contact-message" name="message" required maxlength="1500" rows="6"></textarea>
+      </div>
+      <!-- Honeypot: hidden from real visitors via CSS, invisible in a real browser,
+           but bots that auto-fill every field will trip it. Any submission with
+           this field non-empty is silently dropped. Not foolproof, just cheap. -->
+      <div class="form-row hp-field" aria-hidden="true">
+        <label for="contact-website">Website</label>
+        <input type="text" id="contact-website" name="website" tabindex="-1" autocomplete="off">
+      </div>
+      <button type="submit" id="contact-submit">Send message</button>
+      <p id="contact-status" class="contact-status" role="status"></p>
+    </form>
+  </section>
+
 </main>
 
-<footer>Built from your own log — edit data.js to update anything on this page.</footer>
+<footer>Built from your own log — edit data.json (or use the admin panel) to update anything on this page.</footer>
 
-<script src="data.js"></script>
 <script src="script.js"></script>
 
 </body>
