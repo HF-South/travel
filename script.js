@@ -287,7 +287,8 @@ function renderStats() {
   document.getElementById("stat-hikes").textContent = hikes.length;
   document.getElementById("stat-dives-home").textContent = (dives || []).length;
   document.getElementById("stat-km").textContent = fmt(totalKm, totalKm < 100 ? 1 : 0);
-  document.getElementById("stat-elevation").textContent = fmt(totalUp);
+  const elevEl = document.getElementById("stat-elevation-inline");
+  if (elevEl) elevEl.textContent = totalUp ? `· ${fmt(totalUp)}m climbed` : "";
   const pctEl = document.getElementById("stat-percent");
   if (pctEl) pctEl.textContent = fmt(percent, percent < 10 ? 2 : 1) + "%";
 
@@ -343,6 +344,7 @@ function renderWorldProgress(count, percent) {
    added to data.js. */
 
 let mapInstance = null;
+let worldMapMarkers = {}; // country name -> marker element, for highlighting the selected pin
 
 function showMapFallback() {
   const el = document.getElementById("map-fallback");
@@ -438,6 +440,7 @@ function initMap() {
         .setLngLat([p.lng, p.lat])
         .setPopup(new maplibregl.Popup({ offset: 14, closeButton: false }).setText(p.name))
         .addTo(mapInstance);
+      worldMapMarkers[p.name] = el;
     });
 
     if (points.length > 0) {
@@ -465,6 +468,15 @@ function matchesCountry(fieldValue, country) {
 function showCountryDetail(country) {
   const panel = document.getElementById("country-detail-panel");
   if (!panel) return;
+
+  // highlight the selected pin on the map, and the matching chip in the list,
+  // so the two stay visually connected when a country is selected
+  Object.entries(worldMapMarkers).forEach(([name, el]) => {
+    el.classList.toggle("active", name === country);
+  });
+  document.querySelectorAll("#map-country-list li").forEach(li => {
+    li.classList.toggle("active", li.textContent === country);
+  });
 
   const trips = (SITE_DATA.trips || []).filter(t => matchesCountry(t.country, country));
   const hikes = (SITE_DATA.hikes || []).filter(h => matchesCountry(h.country, country));
@@ -613,10 +625,24 @@ function renderDiveMapMarkers() {
   }
 }
 
-function renderDiveMap() {
-  if (document.getElementById("divemap").classList.contains("active")) {
-    initDiveMap();
-  }
+function initDivesViewToggle() {
+  const buttons = document.querySelectorAll(".view-toggle-btn");
+  if (!buttons.length) return;
+  buttons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      const view = btn.dataset.view;
+      buttons.forEach(b => {
+        b.classList.toggle("active", b === btn);
+        b.setAttribute("aria-selected", b === btn ? "true" : "false");
+      });
+      document.getElementById("dives-list-view").style.display = view === "list" ? "block" : "none";
+      document.getElementById("dives-map-view").style.display = view === "map" ? "block" : "none";
+      if (view === "map") {
+        initDiveMap();
+        setTimeout(() => { if (diveMapInstance) diveMapInstance.resize(); }, 0);
+      }
+    });
+  });
 }
 
 /* ---------------- Trips ---------------- */
@@ -629,18 +655,15 @@ function renderTrips() {
     .sort((a, b) => (b.year || 0) - (a.year || 0));
 
   if (trips.length === 0) {
-    wrap.innerHTML = `<p class="empty">No trips added yet — add one in data.js, or import from Polarsteps with import_trips.py.</p>`;
+    wrap.innerHTML = `<p class="empty">No trips added yet — add one in data.json, or import from Polarsteps with import_trips.py.</p>`;
     return;
   }
 
-  trips.forEach(t => {
-    const card = document.createElement("a");
-    card.className = "trip-card";
-    card.href = `#trip/${t._index}`;
+  function tripCardHtml(t, featured) {
     const cover = t.coverImage || (t.images && t.images[0]) || "";
-    card.innerHTML = `
+    return `
       <div class="trip-media" ${cover ? `style="background-image:url('${cover}')"` : ""}>
-        ${!cover ? `<span class="trip-media-fallback">${(t.country || "?").slice(0,2).toUpperCase()}</span>` : ""}
+        ${!cover ? `<span class="trip-media-fallback${featured ? " big" : ""}">${(t.country || "?").slice(0,2).toUpperCase()}</span>` : ""}
       </div>
       <div class="trip-body">
         <span class="trip-year">${t.year || ""}${t.season ? " · " + t.season : ""}</span>
@@ -649,8 +672,30 @@ function renderTrips() {
         <p>${t.description || ""}</p>
       </div>
     `;
-    wrap.appendChild(card);
-  });
+  }
+
+  const [first, ...rest] = trips;
+
+  if (first) {
+    const featured = document.createElement("a");
+    featured.className = "trip-card trip-card-featured";
+    featured.href = `#trip/${first._index}`;
+    featured.innerHTML = `<span class="trip-featured-label">Latest trip</span>` + tripCardHtml(first, true);
+    wrap.appendChild(featured);
+  }
+
+  if (rest.length) {
+    const grid = document.createElement("div");
+    grid.className = "trip-grid-rest";
+    rest.forEach(t => {
+      const card = document.createElement("a");
+      card.className = "trip-card";
+      card.href = `#trip/${t._index}`;
+      card.innerHTML = tripCardHtml(t, false);
+      grid.appendChild(card);
+    });
+    wrap.appendChild(grid);
+  }
 }
 
 function renderTripDetail(index) {
@@ -675,11 +720,18 @@ function renderTripDetail(index) {
   let bodyHtml = "";
 
   if (hasDayByDay) {
+    const dayNav = t.dayByDay.length > 2 ? `
+      <div class="day-mini-nav" role="navigation" aria-label="Jump to day">
+        ${t.dayByDay.map((d, i) => `<button class="day-mini-nav-btn" data-day-target="trip-day-${i + 1}">Day ${i + 1}</button>`).join("")}
+      </div>
+    ` : "";
+
     bodyHtml = `
       <h2 class="subhead">Day by day</h2>
+      ${dayNav}
       <div class="day-by-day">
         ${t.dayByDay.map((d, i) => `
-          <div class="day-block">
+          <div class="day-block" id="trip-day-${i + 1}">
             <div class="day-header">
               <span class="day-number">Day ${i + 1}</span>
               <span class="day-date">${d.date && d.date !== "unknown" ? formatDayDate(d.date) : ""}</span>
@@ -719,6 +771,17 @@ function renderTripDetail(index) {
     ` : ""}
     ${bodyHtml}
   `;
+
+  // Day mini-nav: scroll to the day block directly rather than using a
+  // real anchor link / location.hash, since the site's router treats any
+  // hash change as page navigation and would otherwise hijack this into
+  // routing back to "home".
+  wrap.querySelectorAll(".day-mini-nav-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = document.getElementById(btn.dataset.dayTarget);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  });
 }
 
 function formatDayDate(dateStr) {
@@ -830,36 +893,65 @@ function renderDives() {
 
   const hasVisibility = dives.some(d => d.visibilityM);
 
-  dives.forEach(d => {
-    const row = document.createElement("article");
-    row.className = "dive-row";
+  function diveRowHtml(d) {
     const profile = diveProfileSvg(d.depthM, d.durationMin);
-    row.innerHTML = `
-      <div class="dive-main">
-        <h3>${d.site || "Untitled dive site"}</h3>
-        <span class="dive-meta">${d.date || "Date unknown"}${d.location ? " · " + d.location : ""}${d.buddy ? " · with " + d.buddy : ""}</span>
-        ${d.notes ? `<p class="dive-notes">${d.notes}</p>` : ""}
-      </div>
-      <div class="dive-stats">
-        <div><span>${d.depthM ? fmt(d.depthM, 1) : "—"}</span><label>m depth</label></div>
-        <div><span>${d.durationMin ? fmt(d.durationMin) : "—"}</span><label>min</label></div>
-        <div><span>${d.waterTempC ? fmt(d.waterTempC, 1) + "°" : "—"}</span><label>water</label></div>
-        ${hasVisibility ? `<div><span>${d.visibilityM ? fmt(d.visibilityM) : "—"}</span><label>m vis</label></div>` : ""}
-      </div>
-      ${profile ? `
-        <div class="dive-profile">
-          ${profile}
-          <span class="dive-profile-caption">Approximate profile — from avg. depth &amp; duration, not raw sensor data</span>
+    return `
+      <article class="dive-row">
+        <div class="dive-main">
+          <h3>${d.site || "Untitled dive site"}</h3>
+          <span class="dive-meta">${d.date || "Date unknown"}${d.location ? " · " + d.location : ""}${d.buddy ? " · with " + d.buddy : ""}</span>
+          ${d.notes ? `<p class="dive-notes">${d.notes}</p>` : ""}
         </div>
-      ` : ""}
+        <div class="dive-stats">
+          <div><span>${d.depthM ? fmt(d.depthM, 1) : "—"}</span><label>m depth</label></div>
+          <div><span>${d.durationMin ? fmt(d.durationMin) : "—"}</span><label>min</label></div>
+          <div><span>${d.waterTempC ? fmt(d.waterTempC, 1) + "°" : "—"}</span><label>water</label></div>
+          ${hasVisibility ? `<div><span>${d.visibilityM ? fmt(d.visibilityM) : "—"}</span><label>m vis</label></div>` : ""}
+        </div>
+        ${profile ? `
+          <div class="dive-profile">
+            ${profile}
+            <span class="dive-profile-caption">Approximate profile — from avg. depth &amp; duration, not raw sensor data</span>
+          </div>
+        ` : ""}
+      </article>
     `;
-    wrap.appendChild(row);
+  }
+
+  // group by year so the page isn't one giant scroll — most recent year
+  // starts open, earlier years collapsed (still fully there, one click away)
+  const byYear = new Map();
+  dives.forEach(d => {
+    const year = d.date ? new Date(d.date).getFullYear() : "Unknown";
+    const key = isNaN(year) ? "Unknown" : year;
+    if (!byYear.has(key)) byYear.set(key, []);
+    byYear.get(key).push(d);
+  });
+  const years = [...byYear.keys()].sort((a, b) => {
+    if (a === "Unknown") return 1;
+    if (b === "Unknown") return -1;
+    return b - a;
+  });
+
+  years.forEach((year, i) => {
+    const yearDives = byYear.get(year);
+    const details = document.createElement("details");
+    details.className = "year-group";
+    if (i === 0) details.open = true;
+    details.innerHTML = `
+      <summary class="year-group-summary">
+        <span class="year-group-year">${year}</span>
+        <span class="year-group-count">${yearDives.length} dive${yearDives.length === 1 ? "" : "s"}</span>
+      </summary>
+      <div class="year-group-body">${yearDives.map(diveRowHtml).join("")}</div>
+    `;
+    wrap.appendChild(details);
   });
 }
 
 /* ---------------- Router ---------------- */
 
-const STATIC_SECTIONS = ["home", "trips", "hikes", "dives", "contact", "social", "divemap"];
+const STATIC_SECTIONS = ["home", "trips", "hikes", "dives", "contact", "social"];
 
 function showSection(id) {
   document.querySelectorAll(".page-section").forEach(s => s.classList.toggle("active", s.id === id));
@@ -889,10 +981,6 @@ function route() {
     // container was hidden (display:none) until just now, so MapLibre
     // needs a resize once it has real dimensions to measure.
     setTimeout(() => { if (mapInstance) mapInstance.resize(); }, 0);
-  }
-  if (resolved === "divemap") {
-    initDiveMap();
-    setTimeout(() => { if (diveMapInstance) diveMapInstance.resize(); }, 0);
   }
 }
 
@@ -1009,6 +1097,7 @@ async function initSite() {
   renderHikes();
   renderDives();
   initContactForm();
+  initDivesViewToggle();
 
   window.addEventListener("hashchange", route);
   route();
