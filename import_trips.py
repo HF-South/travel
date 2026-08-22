@@ -267,11 +267,19 @@ def trip_to_entry(trip, trip_folder: Path):
 
 
 def update_data_json(new_trips, path="data.json"):
+    from datetime import datetime, timezone
+
     with open(path, "r", encoding="utf-8") as f:
         data = json.load(f)
 
     kept = [t for t in data.get("trips", []) if t.get("source") != "polarsteps"]
     data["trips"] = kept + new_trips
+
+    now = datetime.now(timezone.utc).isoformat()
+    data.setdefault("meta", {"lastUpdated": None, "lastSynced": {}})
+    data["meta"].setdefault("lastSynced", {})
+    data["meta"]["lastSynced"]["polarsteps"] = now
+    data["meta"]["lastUpdated"] = now
 
     with open(path, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
