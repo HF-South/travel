@@ -2,7 +2,7 @@
 """
 update_dives.py
 ----------------
-Reads your dive log from an Excel file and writes it into data.js, so
+Reads your dive log from an Excel file and writes it into data.json, so
 the Dives page on your site stays in sync with your spreadsheet.
 
 USAGE
@@ -38,16 +38,14 @@ EXPECTED COLUMNS
     list for that field in COLUMN_KEYWORDS below.
 
 This only touches the block between "DIVE SYNC START" and "DIVE SYNC
-END" in data.js. Anything you added by hand elsewhere is left alone.
+END" in data.json. Anything you added by hand elsewhere is left alone.
 """
 
+import json
 import re
 import sys
 from datetime import datetime, date
 from pathlib import Path
-
-START_MARKER = "/* --- DIVE SYNC START (do not edit this block by hand — it gets overwritten by update_dives.py) --- */"
-END_MARKER = "/* --- DIVE SYNC END --- */"
 
 # Each field is matched if ALL of its keyword groups appear somewhere in the
 # header text. A "group" is itself a list of alternatives (any one of them
@@ -71,10 +69,6 @@ COLUMN_KEYWORDS = {
 }
 # buddy's groups are OR'd together (special-cased below) rather than AND'd,
 # since "With who" only contains "who", not "buddy".
-
-
-def esc(s):
-    return str(s or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").strip()
 
 
 def norm(s):
@@ -255,40 +249,35 @@ def read_dives(path):
 
 
 def dive_to_entry(d):
-    return f"""    {{
-      date: "{d['date']}",
-      location: "{esc(d['location'])}",
-      site: "{esc(d['site'])}",
-      depthM: {d['depthM']:g},
-      durationMin: {d['durationMin']:g},
-      waterTempC: {d['waterTempC']:g},
-      visibilityM: {d['visibilityM']:g},
-      buddy: "{esc(d['buddy'])}",
-      notes: "{esc(d['notes'])}",
-    }},"""
+    return {
+        "date": d["date"],
+        "location": d["location"],
+        "site": d["site"],
+        "depthM": d["depthM"],
+        "durationMin": d["durationMin"],
+        "waterTempC": d["waterTempC"],
+        "visibilityM": d["visibilityM"],
+        "buddy": d["buddy"],
+        "notes": d["notes"],
+        "source": "spreadsheet",
+    }
 
 
-def update_data_js(entries_text, path="data.js"):
+def update_data_json(new_dives, path="data.json"):
     with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
+        data = json.load(f)
 
-    if START_MARKER not in content:
-        if "dives: [" not in content:
-            print("Couldn't find a 'dives:' list in data.js — make sure you're using the "
-                  "updated data.js that includes a Dives section.", file=sys.stderr)
-            sys.exit(1)
-        content = content.replace(
-            "dives: [",
-            f"dives: [\n{START_MARKER}\n{entries_text}\n    {END_MARKER}\n",
-            1,
-        )
-    else:
-        pattern = re.compile(re.escape(START_MARKER) + r".*?" + re.escape(END_MARKER), re.DOTALL)
-        replacement = START_MARKER + "\n" + entries_text + "\n    " + END_MARKER
-        content = pattern.sub(replacement, content, count=1)
+    if "dives" not in data:
+        print("Couldn't find a 'dives' list in data.json — make sure you're using the "
+              "updated data.json that includes a Dives section.", file=sys.stderr)
+        sys.exit(1)
+
+    kept = [d for d in data["dives"] if d.get("source") != "spreadsheet"]
+    data["dives"] = kept + new_dives
 
     with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 def main():
@@ -303,12 +292,12 @@ def main():
 
     dives = read_dives(xlsx_path)
     if not dives:
-        print("No dives found — nothing changed in data.js.")
+        print("No dives found — nothing changed in data.json.")
         return
 
-    entries = "\n".join(dive_to_entry(d) for d in dives)
-    update_data_js(entries)
-    print(f"Done — wrote {len(dives)} dives into data.js.")
+    entries = [dive_to_entry(d) for d in dives]
+    update_data_json(entries)
+    print(f"Done — wrote {len(dives)} dives into data.json.")
     print("Open index.html (or refresh it) to see the update.")
 
 
