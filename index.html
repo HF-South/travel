@@ -146,8 +146,24 @@
     color:var(--text-muted);
     font-size:1.05rem;
     max-width:46ch;
-    margin:0 0 40px;
+    margin:0 0 20px;
   }
+
+  .last-synced{
+    display:inline-flex; align-items:center; gap:7px;
+    font-family:var(--font-mono);
+    font-size:0.74rem;
+    letter-spacing:0.04em;
+    color:var(--text-faint);
+    margin:0 0 32px;
+  }
+  .last-synced .sync-dot{
+    width:6px; height:6px; border-radius:50%;
+    background:var(--accent-moss);
+    box-shadow:0 0 6px 1px rgba(124,160,133,0.5);
+    flex-shrink:0;
+  }
+  .last-synced.stale .sync-dot{ background:var(--text-faint); box-shadow:none; }
 
   /* ---------- Stats strip ---------- */
   .stats-strip{
@@ -445,12 +461,47 @@
   }
   .dive-meta{ font-size:0.78rem; color:var(--text-muted); }
   .dive-notes{ margin:8px 0 0; font-size:0.85rem; color:var(--text-muted); max-width:48ch; }
+
+  .dive-profile{ width:100%; margin-top:14px; }
+  .dive-profile-svg{ width:100%; height:56px; display:block; }
+  .dive-profile-caption{
+    display:block; margin-top:4px;
+    font-family:var(--font-mono); font-size:0.62rem; letter-spacing:0.02em;
+    color:var(--text-faint);
+  }
   .dive-stats{ display:flex; gap:22px; }
   .dive-stats div{ text-align:right; }
   .dive-stats span{ display:block; font-family:var(--font-mono); font-size:1rem; color:var(--accent-moss); }
   .dive-stats label{ display:block; font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
 
   .divesite-panel{ margin-top:20px; }
+
+  .country-detail-panel{ margin-top:20px; }
+  .country-detail-card{
+    border:1px solid var(--line-topo);
+    background:var(--bg-panel);
+    border-radius:6px;
+    padding:22px 24px;
+  }
+  .country-detail-card h2{
+    font-family:var(--font-display); font-weight:500; font-size:1.3rem; margin:0 0 16px;
+  }
+  .cd-section{ margin-bottom:18px; }
+  .cd-section:last-child{ margin-bottom:0; }
+  .cd-section-label{
+    font-family:var(--font-mono); font-size:0.68rem; letter-spacing:0.1em; text-transform:uppercase;
+    color:var(--accent-moss); margin-bottom:8px; display:block;
+  }
+  .cd-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:8px 0; border-top:1px solid var(--line-topo);
+    font-size:0.86rem; gap:10px; flex-wrap:wrap;
+  }
+  .cd-row:first-of-type{ border-top:none; }
+  .cd-row a{ color:var(--text-primary); }
+  .cd-row a:hover{ color:var(--accent-amber); }
+  .cd-row .cd-meta{ color:var(--text-muted); font-family:var(--font-mono); font-size:0.76rem; }
+  .cd-empty{ color:var(--text-faint); font-style:italic; font-size:0.85rem; }
   .divesite-panel .empty{ color:var(--text-muted); font-style:italic; }
   .divesite-card{
     border:1px solid var(--line-topo);
@@ -684,7 +735,6 @@
     <div class="wordmark"><span id="wm-name">Field Log</span> <small>Expedition record</small></div>
     <nav>
       <a href="#home" class="nav-link" data-target="home">Home</a>
-      <a href="#map" class="nav-link" data-target="map">Map</a>
       <a href="#trips" class="nav-link" data-target="trips">Trips</a>
       <a href="#hikes" class="nav-link" data-target="hikes">Hikes</a>
       <a href="#dives" class="nav-link" data-target="dives">Dives</a>
@@ -697,11 +747,12 @@
 
 <main>
 
-  <!-- HOME -->
+  <!-- HOME (the map is the front door now — click a country to see everything that happened there) -->
   <section id="home" class="page-section">
     <div class="eyebrow">Personal travel log</div>
     <h1 id="hero-title">Everywhere I've <em>been</em>, on foot and off.</h1>
     <p class="lede" id="hero-tagline">A running record of trips taken, countries crossed, and trails walked.</p>
+    <p id="last-synced" class="last-synced"></p>
 
     <div class="stats-strip">
       <div class="stat-cell"><span id="stat-countries">0</span><label>Countries</label></div>
@@ -712,14 +763,10 @@
       <div class="stat-cell"><span id="stat-km">0</span><label>Km walked</label></div>
       <div class="stat-cell"><span id="stat-elevation">0</span><label>M climbed</label></div>
     </div>
-  </section>
 
-  <!-- MAP -->
-  <section id="map" class="page-section">
-    <div class="eyebrow">Atlas</div>
-    <h1>The map so far.</h1>
-    <p class="lede">Every pin is a country crossed off the list — the dotted line traces the order they were added.</p>
     <div class="map-wrap">
+      <h2 style="font-family:var(--font-display); font-weight:500; font-size:1.2rem; margin:0 0 4px;">The map so far.</h2>
+      <p class="map-sub">Click any pin to see the trips, hikes, and dives logged there.</p>
       <div id="map-container">
         <div id="map-fallback">Map couldn't load — check your internet connection.<br>(It needs to reach tiles.openfreemap.org and unpkg.com.)</div>
       </div>
@@ -728,6 +775,7 @@
         <span id="world-progress-label">0 of 195 countries · 0% of the world</span>
       </div>
       <ul id="map-country-list"></ul>
+      <div id="country-detail-panel" class="country-detail-panel"></div>
     </div>
   </section>
 
