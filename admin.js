@@ -59,6 +59,9 @@ async function fetchSiteData() {
 }
 
 async function saveSiteData() {
+  siteData.meta = siteData.meta || { lastUpdated: null, lastSynced: {} };
+  siteData.meta.lastUpdated = new Date().toISOString();
+
   const content = JSON.stringify(siteData, null, 2) + "\n";
   const res = await fetch(contentsUrl(), {
     method: "PUT",
