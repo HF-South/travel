@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Admin — Field Log</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-void: #0B0F0E; --bg-panel: #121815; --bg-raised: #17201C;
+    --line-topo: #24312C; --text-primary: #EDEAE1; --text-muted: #8B948D;
+    --text-faint: #5A6560; --accent-amber: #E8A33D; --accent-amber-dim: #6b5427;
+    --accent-moss: #7CA085; --accent-rust: #C2703F;
+    --font-display: "Fraunces", serif; --font-body: "Inter", sans-serif; --font-mono: "JetBrains Mono", monospace;
+  }
+  *{ box-sizing:border-box; }
+  body{
+    margin:0; background:var(--bg-void); color:var(--text-primary);
+    font-family:var(--font-body); line-height:1.5;
+  }
+  a{ color:var(--accent-amber); }
+  header{
+    border-bottom:1px solid var(--line-topo); padding:18px 24px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .wordmark{ font-family:var(--font-display); font-size:1.2rem; }
+  .wordmark small{
+    font-family:var(--font-mono); font-size:0.62rem; color:var(--accent-amber);
+    letter-spacing:0.14em; text-transform:uppercase; margin-left:8px;
+  }
+  #logout-btn{ display:none; }
+  main{ max-width:900px; margin:0 auto; padding:32px 24px 80px; }
+  h1{ font-family:var(--font-display); font-weight:500; font-size:1.9rem; margin:0 0 8px; }
+  h2{ font-family:var(--font-display); font-weight:500; font-size:1.25rem; margin:0 0 4px; }
+  p.hint{ color:var(--text-muted); font-size:0.9rem; margin:0 0 20px; max-width:60ch; }
+  .warning-box{
+    border:1px solid var(--accent-rust); background:rgba(194,112,63,0.08);
+    border-radius:6px; padding:16px 18px; margin-bottom:28px; font-size:0.88rem; color:var(--text-primary);
+  }
+  .warning-box strong{ color:var(--accent-rust); }
+  .panel{
+    border:1px solid var(--line-topo); background:var(--bg-panel);
+    border-radius:6px; padding:22px 24px; margin-bottom:24px;
+  }
+  .form-row{ display:flex; flex-direction:column; gap:6px; margin-bottom:14px; }
+  .form-row label{
+    font-family:var(--font-mono); font-size:0.7rem; letter-spacing:0.06em;
+    text-transform:uppercase; color:var(--text-muted);
+  }
+  .form-row input, .form-row textarea, .form-row select{
+    background:var(--bg-raised); border:1px solid var(--line-topo); border-radius:4px;
+    padding:9px 11px; color:var(--text-primary); font-family:var(--font-body); font-size:0.92rem;
+  }
+  .form-row textarea{ font-family:var(--font-mono); font-size:0.82rem; resize:vertical; }
+  .row-2{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  button{
+    font-family:var(--font-mono); font-size:0.76rem; letter-spacing:0.05em;
+    text-transform:uppercase; cursor:pointer; border-radius:4px; border:1px solid var(--line-topo);
+    background:var(--bg-raised); color:var(--text-primary); padding:9px 16px;
+  }
+  button:hover{ border-color:var(--accent-amber-dim); }
+  button.primary{ background:var(--accent-amber); color:var(--bg-void); border:none; }
+  button.primary:hover{ opacity:0.88; }
+  button.danger{ color:var(--accent-rust); }
+  button:disabled{ opacity:0.5; cursor:default; }
+  .list-item{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:12px 14px; border:1px solid var(--line-topo); border-radius:5px; margin-bottom:8px;
+    background:var(--bg-raised); flex-wrap:wrap;
+  }
+  .list-item .meta{ font-size:0.82rem; color:var(--text-muted); }
+  .list-item .actions{ display:flex; gap:8px; }
+  .pill{
+    font-family:var(--font-mono); font-size:0.62rem; text-transform:uppercase;
+    padding:2px 8px; border-radius:10px; border:1px solid var(--line-topo); color:var(--text-muted);
+  }
+  .pill.synced{ color:var(--accent-moss); border-color:var(--accent-moss); }
+  .tabs{ display:flex; gap:6px; margin-bottom:20px; flex-wrap:wrap; }
+  .tab-btn{
+    font-family:var(--font-mono); font-size:0.75rem; letter-spacing:0.05em; text-transform:uppercase;
+    padding:8px 14px; border-radius:4px; border:1px solid var(--line-topo); background:transparent; color:var(--text-muted); cursor:pointer;
+  }
+  .tab-btn.active{ color:var(--accent-amber); border-color:var(--accent-amber-dim); background:rgba(232,163,61,0.06); }
+  .tab-panel{ display:none; }
+  .tab-panel.active{ display:block; }
+  #status-msg{ font-size:0.85rem; margin-top:10px; min-height:1.2em; }
+  #status-msg.ok{ color:var(--accent-moss); }
+  #status-msg.error{ color:var(--accent-rust); }
+  #app{ display:none; }
+  code{ background:var(--bg-raised); padding:1px 5px; border-radius:3px; font-size:0.85em; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wordmark">Field Log <small>Admin</small></div>
+  <button id="logout-btn">Log out</button>
+</header>
+
+<main>
+
+  <!-- SETUP / LOGIN -->
+  <div id="setup-panel" class="panel">
+    <h1>Connect to your repo</h1>
+    <p class="hint">This edits data.json directly in your GitHub repo via GitHub's API. Nothing here is stored anywhere but your own browser.</p>
+
+    <div class="warning-box">
+      <strong>Before you paste a token here:</strong> create a <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">fine-grained personal access token</a> scoped to <em>only this one repository</em>, with <strong>Contents: Read and write</strong> permission and nothing else. Give it an expiry date (e.g. 90 days) rather than "no expiration". This token is stored only in this browser's local storage — it is never written to any file or committed anywhere. Anyone with access to this browser session could use it, so don't leave this page logged in on a shared/public computer, and use "Log out" when you're done.
+    </div>
+
+    <div class="form-row">
+      <label for="gh-owner">GitHub username / org</label>
+      <input type="text" id="gh-owner" placeholder="e.g. yourusername">
+    </div>
+    <div class="form-row">
+      <label for="gh-repo">Repository name</label>
+      <input type="text" id="gh-repo" placeholder="e.g. my-travel-site">
+    </div>
+    <div class="form-row">
+      <label for="gh-branch">Branch</label>
+      <input type="text" id="gh-branch" value="main">
+    </div>
+    <div class="form-row">
+      <label for="gh-token">Personal access token</label>
+      <input type="password" id="gh-token" placeholder="github_pat_...">
+    </div>
+    <button class="primary" id="connect-btn">Connect</button>
+    <p id="setup-status" class="hint"></p>
+  </div>
+
+  <!-- MAIN APP -->
+  <div id="app">
+    <h1>Edit your site</h1>
+    <p class="hint">Changes save straight to your repo's data.json. Your live site updates within a minute or two of saving.</p>
+
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="countries">Countries</button>
+      <button class="tab-btn" data-tab="trips">Trips</button>
+      <button class="tab-btn" data-tab="hikes">Hikes</button>
+      <button class="tab-btn" data-tab="dives">Dives</button>
+    </div>
+
+    <!-- COUNTRIES -->
+    <div class="tab-panel active" id="tab-countries">
+      <div class="panel">
+        <h2>Add a country</h2>
+        <div class="form-row">
+          <label for="new-country">Country name</label>
+          <input type="text" id="new-country" placeholder="e.g. Vietnam">
+        </div>
+        <button class="primary" id="add-country-btn">Add country</button>
+      </div>
+      <div id="countries-list"></div>
+    </div>
+
+    <!-- TRIPS -->
+    <div class="tab-panel" id="tab-trips">
+      <div class="panel">
+        <h2 id="trip-form-title">Add a trip</h2>
+        <div class="row-2">
+          <div class="form-row"><label>Title</label><input type="text" id="trip-title"></div>
+          <div class="form-row"><label>Country</label><input type="text" id="trip-country"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Year</label><input type="number" id="trip-year"></div>
+          <div class="form-row"><label>Season</label><input type="text" id="trip-season"></div>
+        </div>
+        <div class="form-row"><label>Short description (for the card)</label><textarea id="trip-description" rows="2"></textarea></div>
+        <div class="form-row"><label>Full story (for the trip's page)</label><textarea id="trip-narrative" rows="4"></textarea></div>
+        <div class="form-row"><label>Cover image URL</label><input type="text" id="trip-cover"></div>
+        <div class="row-2">
+          <div class="form-row"><label>Distance (km)</label><input type="number" id="trip-distance"></div>
+          <div class="form-row"><label>Days</label><input type="number" id="trip-days"></div>
+        </div>
+        <div class="form-row"><label>Highlights (one per line)</label><textarea id="trip-highlights" rows="3"></textarea></div>
+        <div class="form-row"><label>More photo URLs (one per line, optional)</label><textarea id="trip-images" rows="3"></textarea></div>
+        <button class="primary" id="save-trip-btn">Add trip</button>
+        <button id="cancel-trip-edit-btn" style="display:none;">Cancel edit</button>
+      </div>
+      <div id="trips-list"></div>
+    </div>
+
+    <!-- HIKES -->
+    <div class="tab-panel" id="tab-hikes">
+      <div class="panel">
+        <h2 id="hike-form-title">Add a hike</h2>
+        <div class="row-2">
+          <div class="form-row"><label>Name</label><input type="text" id="hike-name"></div>
+          <div class="form-row"><label>Date</label><input type="date" id="hike-date"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Distance (km)</label><input type="number" step="0.1" id="hike-distance"></div>
+          <div class="form-row"><label>Country</label><input type="text" id="hike-country"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Elevation up (m)</label><input type="number" id="hike-up"></div>
+          <div class="form-row"><label>Elevation down (m)</label><input type="number" id="hike-down"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Duration (minutes)</label><input type="number" id="hike-duration"></div>
+          <div class="form-row"><label>Komoot URL (optional)</label><input type="text" id="hike-url"></div>
+        </div>
+        <button class="primary" id="save-hike-btn">Add hike</button>
+        <button id="cancel-hike-edit-btn" style="display:none;">Cancel edit</button>
+      </div>
+      <div id="hikes-list"></div>
+    </div>
+
+    <!-- DIVES -->
+    <div class="tab-panel" id="tab-dives">
+      <div class="panel">
+        <h2 id="dive-form-title">Add a dive</h2>
+        <div class="row-2">
+          <div class="form-row"><label>Date</label><input type="date" id="dive-date"></div>
+          <div class="form-row"><label>Location / country</label><input type="text" id="dive-location"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Dive site</label><input type="text" id="dive-site"></div>
+          <div class="form-row"><label>Buddy</label><input type="text" id="dive-buddy"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Depth (m)</label><input type="number" step="0.1" id="dive-depth"></div>
+          <div class="form-row"><label>Duration (min)</label><input type="number" id="dive-duration"></div>
+        </div>
+        <div class="row-2">
+          <div class="form-row"><label>Water temp (°C)</label><input type="number" step="0.1" id="dive-temp"></div>
+          <div class="form-row"><label>Visibility (m)</label><input type="number" id="dive-vis"></div>
+        </div>
+        <div class="form-row"><label>Notes</label><textarea id="dive-notes" rows="2"></textarea></div>
+        <button class="primary" id="save-dive-btn">Add dive</button>
+        <button id="cancel-dive-edit-btn" style="display:none;">Cancel edit</button>
+      </div>
+      <div id="dives-list"></div>
+    </div>
+
+    <div class="panel">
+      <button class="primary" id="save-github-btn">Save all changes to GitHub</button>
+      <p id="status-msg"></p>
+    </div>
+  </div>
+
+</main>
+
+<script src="admin.js"></script>
+</body>
+</html>
