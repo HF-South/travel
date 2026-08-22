@@ -3,7 +3,30 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Field Log</title>
+<title>Sam's Log — Personal Travel Journal</title>
+<meta name="description" content="A running record of trips taken, countries crossed, hikes walked, and dives logged." />
+
+<!-- Favicons -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+<meta name="theme-color" content="#0B0F0E">
+
+<!-- Open Graph / social preview (Discord, WhatsApp, iMessage, Slack, etc.) -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Sam's Log — Personal Travel Journal">
+<meta property="og:description" content="A running record of trips taken, countries crossed, hikes walked, and dives logged.">
+<meta property="og:image" content="https://www.samdoethet.com/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:url" content="https://www.samdoethet.com/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Sam's Log — Personal Travel Journal">
+<meta name="twitter:description" content="A running record of trips taken, countries crossed, hikes walked, and dives logged.">
+<meta name="twitter:image" content="https://www.samdoethet.com/og-image.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -172,7 +195,7 @@
   }
   .map-sub{ color:var(--text-muted); font-size:0.9rem; margin:0 0 16px; }
 
-  #map-container{
+  #map-container, #divemap-container{
     width:100%; height:520px;
     border-radius:4px;
     overflow:hidden;
@@ -182,10 +205,10 @@
   /* OpenFreeMap's "liberty" style is the stable, actively-maintained one —
      we theme it dark with a filter on just the canvas, so markers/popups
      on top keep their normal colours. */
-  #map-container .maplibregl-canvas{
+  #map-container .maplibregl-canvas, #divemap-container .maplibregl-canvas{
     filter: invert(1) hue-rotate(190deg) brightness(1.04) contrast(0.92) saturate(0.85);
   }
-  #map-fallback{
+  #map-fallback, .map-fallback-msg{
     position:absolute; inset:0;
     display:none;
     align-items:center; justify-content:center;
@@ -196,7 +219,7 @@
     color:var(--text-muted);
     background:var(--bg-void);
   }
-  #map-fallback.show{ display:flex; }
+  #map-fallback.show, .map-fallback-msg.show{ display:flex; }
   /* tone MapLibre's default UI down to fit the dark theme */
   .maplibregl-ctrl-group{
     background:var(--bg-panel) !important;
@@ -427,6 +450,35 @@
   .dive-stats span{ display:block; font-family:var(--font-mono); font-size:1rem; color:var(--accent-moss); }
   .dive-stats label{ display:block; font-size:0.65rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; }
 
+  .divesite-panel{ margin-top:20px; }
+  .divesite-panel .empty{ color:var(--text-muted); font-style:italic; }
+  .divesite-card{
+    border:1px solid var(--line-topo);
+    background:var(--bg-panel);
+    border-radius:6px;
+    padding:20px 22px;
+  }
+  .divesite-card h2{
+    font-family:var(--font-display); font-weight:500; font-size:1.2rem; margin:0 0 4px;
+  }
+  .divesite-card .divesite-meta{ font-size:0.82rem; color:var(--text-muted); margin-bottom:14px; }
+  .divesite-dive-row{
+    display:flex; justify-content:space-between; align-items:center;
+    padding:10px 0; border-top:1px solid var(--line-topo);
+    font-size:0.88rem; gap:12px; flex-wrap:wrap;
+  }
+  .divesite-dive-row:first-of-type{ border-top:none; }
+  .divesite-dive-row .ddate{ color:var(--text-muted); font-family:var(--font-mono); font-size:0.78rem; }
+  .divesite-dive-row .dstats{ display:flex; gap:14px; font-family:var(--font-mono); font-size:0.8rem; color:var(--accent-moss); }
+  .divemap-marker{
+    width:14px; height:14px; border-radius:50%;
+    background:var(--accent-moss);
+    box-shadow:0 0 0 6px rgba(124,160,133,0.18);
+    border:2px solid var(--bg-void);
+    cursor:pointer;
+  }
+  .divemap-marker.active{ background:var(--accent-amber); box-shadow:0 0 0 6px rgba(232,163,61,0.22); }
+
   .empty{ color:var(--text-muted); font-style:italic; }
 
   /* ---------- Contact form ---------- */
@@ -479,6 +531,39 @@
   .contact-status{ font-size:0.85rem; margin:0; min-height:1.2em; }
   .contact-status.ok{ color:var(--accent-moss); }
   .contact-status.error{ color:var(--accent-rust); }
+
+  /* ---------- Social ---------- */
+  .social-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));
+    gap:16px; max-width:640px;
+  }
+  .social-card{
+    display:flex; align-items:center; gap:16px;
+    border:1px solid var(--line-topo);
+    background:var(--bg-panel);
+    border-radius:6px;
+    padding:20px 22px;
+    transition:border-color .2s ease, transform .2s ease;
+  }
+  .social-card:hover{ border-color:var(--accent-amber-dim); transform:translateY(-2px); }
+  .social-icon{
+    width:46px; height:46px; flex-shrink:0;
+    border-radius:50%;
+    display:flex; align-items:center; justify-content:center;
+    border:1px solid var(--line-topo);
+    background:var(--bg-raised);
+  }
+  .social-icon svg{ width:22px; height:22px; }
+  .instagram-icon{ color:var(--accent-rust); }
+  .tiktok-icon{ color:var(--accent-moss); }
+  .social-body{ display:flex; flex-direction:column; gap:2px; flex:1; }
+  .social-platform{
+    font-family:var(--font-display); font-weight:500; font-size:1.05rem; color:var(--text-primary);
+  }
+  .social-handle{ font-family:var(--font-mono); font-size:0.8rem; color:var(--text-muted); }
+  .social-arrow{ font-family:var(--font-mono); color:var(--text-faint); font-size:1rem; }
+  .social-card:hover .social-arrow{ color:var(--accent-amber); }
 
   footer{
     border-top:1px solid var(--line-topo);
@@ -603,7 +688,9 @@
       <a href="#trips" class="nav-link" data-target="trips">Trips</a>
       <a href="#hikes" class="nav-link" data-target="hikes">Hikes</a>
       <a href="#dives" class="nav-link" data-target="dives">Dives</a>
+      <a href="#divemap" class="nav-link" data-target="divemap">Dive Map</a>
       <a href="#contact" class="nav-link" data-target="contact">Contact</a>
+      <a href="#social" class="nav-link" data-target="social">Social</a>
     </nav>
   </div>
 </header>
@@ -672,6 +759,19 @@
     <div id="dives-list"></div>
   </section>
 
+  <!-- DIVE MAP -->
+  <section id="divemap" class="page-section">
+    <div class="eyebrow">Where I've been under</div>
+    <h1>Dive map.</h1>
+    <p class="lede">Every dive site pinned — click a pin to see every dive logged there.</p>
+    <div class="map-wrap">
+      <div id="divemap-container">
+        <div id="divemap-fallback" class="map-fallback-msg">Map couldn't load — check your internet connection.</div>
+      </div>
+    </div>
+    <div id="divesite-panel" class="divesite-panel"></div>
+  </section>
+
   <!-- HIKES -->
   <section id="hikes" class="page-section">
     <div class="eyebrow">Trail record · synced from Komoot</div>
@@ -708,6 +808,41 @@
       <button type="submit" id="contact-submit">Send message</button>
       <p id="contact-status" class="contact-status" role="status"></p>
     </form>
+  </section>
+
+  <!-- SOCIAL -->
+  <section id="social" class="page-section">
+    <div class="eyebrow">Elsewhere</div>
+    <h1>Find me elsewhere.</h1>
+    <p class="lede">More trip clips and behind-the-scenes than what makes it onto this site.</p>
+    <div class="social-grid">
+      <a href="https://www.instagram.com/iaintthatanymore/" target="_blank" rel="noopener" class="social-card">
+        <div class="social-icon instagram-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6">
+            <rect x="3" y="3" width="18" height="18" rx="5"/>
+            <circle cx="12" cy="12" r="4.2"/>
+            <circle cx="17.2" cy="6.8" r="1.1" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+        <div class="social-body">
+          <span class="social-platform">Instagram</span>
+          <span class="social-handle">@iaintthatanymore</span>
+        </div>
+        <span class="social-arrow">↗</span>
+      </a>
+      <a href="https://www.tiktok.com/@jeweetzelfwel" target="_blank" rel="noopener" class="social-card">
+        <div class="social-icon tiktok-icon">
+          <svg viewBox="0 0 24 24" fill="currentColor">
+            <path d="M14 3c.4 2 1.9 3.6 4 4v3c-1.5 0-2.9-.4-4-1.2V15a6 6 0 1 1-6-6c.3 0 .7 0 1 .1v3.1a3 3 0 1 0 2 2.8V3h3z"/>
+          </svg>
+        </div>
+        <div class="social-body">
+          <span class="social-platform">TikTok</span>
+          <span class="social-handle">@jeweetzelfwel</span>
+        </div>
+        <span class="social-arrow">↗</span>
+      </a>
+    </div>
   </section>
 
 </main>
