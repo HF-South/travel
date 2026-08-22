@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="48" fill="#0B0F0E"/>
+  <circle cx="50" cy="50" r="43" fill="none" stroke="#E8A33D" stroke-width="2.5"/>
+  <circle cx="50" cy="50" r="36" fill="none" stroke="#7CA085" stroke-width="1" opacity="0.5"/>
+
+  <!-- tick marks -->
+  <g stroke="#7CA085" stroke-width="1.5" opacity="0.7">
+    <line x1="50" y1="9" x2="50" y2="15"/>
+    <line x1="50" y1="85" x2="50" y2="91"/>
+    <line x1="9" y1="50" x2="15" y2="50"/>
+    <line x1="85" y1="50" x2="91" y2="50"/>
+  </g>
+  <g stroke="#7CA085" stroke-width="1" opacity="0.4">
+    <line x1="21" y1="21" x2="25" y2="25"/>
+    <line x1="79" y1="21" x2="75" y2="25"/>
+    <line x1="21" y1="79" x2="25" y2="75"/>
+    <line x1="79" y1="79" x2="75" y2="75"/>
+  </g>
+
+  <!-- needle -->
+  <polygon points="50,20 58,50 50,80 42,50" fill="#E8A33D"/>
+  <polygon points="50,20 58,50 50,50" fill="#F4C878"/>
+  <polygon points="50,80 42,50 50,50" fill="#8A5E22"/>
+
+  <circle cx="50" cy="50" r="4.5" fill="#0B0F0E" stroke="#E8A33D" stroke-width="1.5"/>
+</svg>
