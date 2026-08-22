@@ -75,6 +75,28 @@
 
   a{ color:inherit; text-decoration:none; }
 
+  /* visible focus ring for keyboard navigation, invisible for mouse clicks */
+  :focus-visible{
+    outline:2px solid var(--accent-amber);
+    outline-offset:2px;
+    border-radius:2px;
+  }
+
+  .skip-link{
+    position:absolute; top:-40px; left:12px; z-index:2000;
+    background:var(--accent-amber); color:var(--bg-void);
+    padding:10px 16px; border-radius:4px;
+    font-family:var(--font-mono); font-size:0.8rem; font-weight:500;
+    transition:top .2s ease;
+  }
+  .skip-link:focus{ top:12px; }
+
+  .map-pin-marker, .divemap-marker{ cursor:pointer; }
+  .map-pin-marker:focus-visible, .divemap-marker:focus-visible{
+    outline:2px solid var(--text-primary);
+    outline-offset:3px;
+  }
+
   /* ---------- Nav ---------- */
   header{
     position:sticky; top:0; z-index:50;
@@ -380,8 +402,13 @@
   }
   .gallery-img{
     aspect-ratio:4/3; border-radius:6px;
-    background:var(--bg-panel) center/cover no-repeat;
+    background:var(--bg-panel);
     border:1px solid var(--line-topo);
+    overflow:hidden;
+    display:block;
+  }
+  .gallery-img img{
+    width:100%; height:100%; object-fit:cover; display:block;
   }
 
   .day-by-day{ display:flex; flex-direction:column; gap:30px; }
@@ -556,6 +583,7 @@
   .form-row input:focus, .form-row textarea:focus{
     outline:none;
     border-color:var(--accent-amber-dim);
+    box-shadow:0 0 0 3px rgba(232,163,61,0.18);
   }
   .hp-field{
     position:absolute;
@@ -719,6 +747,8 @@
 </head>
 <body>
 
+<a href="#main-content" class="skip-link">Skip to content</a>
+
 <div id="loader">
   <div class="globe-wrap">
     <div class="globe">
@@ -745,7 +775,8 @@
   </div>
 </header>
 
-<main>
+<main id="main-content">
+
 
   <!-- HOME (the map is the front door now — click a country to see everything that happened there) -->
   <section id="home" class="page-section">

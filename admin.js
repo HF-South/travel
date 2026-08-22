@@ -499,9 +499,16 @@ function renderAdminDiveMapMarkers() {
     const el = document.createElement("div");
     el.className = "map-pin-marker";
     el.style.cursor = "pointer";
-    el.addEventListener("click", (e) => {
+    el.setAttribute("role", "button");
+    el.setAttribute("tabindex", "0");
+    el.setAttribute("aria-label", `Manage dive site: ${site.name}`);
+    const activate = (e) => {
       e.stopPropagation(); // don't also trigger the map's "add new site" click handler
       openDiveSiteManager(site.id);
+    };
+    el.addEventListener("click", activate);
+    el.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); activate(e); }
     });
     const marker = new maplibregl.Marker({ element: el }).setLngLat([site.lng, site.lat]).addTo(adminDiveMapInstance);
     adminDiveMapMarkers[site.id] = marker;

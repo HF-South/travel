@@ -3,6 +3,23 @@
    the time render functions run. */
 let SITE_DATA = null;
 
+/* Makes a MapLibre marker element (a plain <div>) reachable by keyboard
+   and screen readers — by default these are mouse-only, which is a real
+   accessibility gap for anything driven by map clicks. */
+function makeMarkerAccessible(el, label, onActivate) {
+  el.setAttribute("role", "button");
+  el.setAttribute("tabindex", "0");
+  el.setAttribute("aria-label", label);
+  el.addEventListener("click", onActivate);
+  el.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      onActivate();
+    }
+  });
+}
+
+
 /* ============================================================
    Country centroid lookup (lat, lng) for placing map pins.
    Covers all UN member states plus a few commonly-tracked
@@ -353,7 +370,13 @@ function renderCountryList() {
     const li = document.createElement("li");
     li.textContent = name;
     li.style.cursor = "pointer";
+    li.setAttribute("role", "button");
+    li.setAttribute("tabindex", "0");
+    li.setAttribute("aria-label", `Show trips, hikes, and dives in ${name}`);
     li.addEventListener("click", () => showCountryDetail(name));
+    li.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showCountryDetail(name); }
+    });
     if (!COUNTRY_COORDS[name]) li.classList.add("no-pin");
     list.appendChild(li);
   });
@@ -410,7 +433,7 @@ function initMap() {
     points.forEach(p => {
       const el = document.createElement("div");
       el.className = "map-pin-marker";
-      el.addEventListener("click", () => showCountryDetail(p.name));
+      makeMarkerAccessible(el, `Show trips, hikes, and dives in ${p.name}`, () => showCountryDetail(p.name));
       new maplibregl.Marker({ element: el })
         .setLngLat([p.lng, p.lat])
         .setPopup(new maplibregl.Popup({ offset: 14, closeButton: false }).setText(p.name))
@@ -569,7 +592,7 @@ function renderDiveMapMarkers() {
   sites.forEach(site => {
     const el = document.createElement("div");
     el.className = "divemap-marker";
-    el.addEventListener("click", () => {
+    makeMarkerAccessible(el, `Show dives logged at ${site.name}`, () => {
       setActiveDiveMarker(site.id);
       renderDiveSitePanel(site.id);
     });
@@ -665,7 +688,7 @@ function renderTripDetail(index) {
             ${d.description ? `<p class="day-description">${d.description}</p>` : ""}
             ${(d.photos && d.photos.length) ? `
               <div class="gallery">
-                ${d.photos.map(src => `<div class="gallery-img" style="background-image:url('${src}')"></div>`).join("")}
+                ${d.photos.map(src => `<div class="gallery-img"><img src="${src}" alt="Photo from ${t.title}${d.title ? " — " + d.title : ""}" loading="lazy"></div>`).join("")}
               </div>
             ` : `<p class="empty">No photos for this day.</p>`}
           </div>
@@ -675,7 +698,7 @@ function renderTripDetail(index) {
   } else if (flatGallery.length > 1) {
     bodyHtml = `
       <h2 class="subhead">Photos</h2>
-      <div class="gallery">${flatGallery.slice(1).map(src => `<div class="gallery-img" style="background-image:url('${src}')"></div>`).join("")}</div>
+      <div class="gallery">${flatGallery.slice(1).map(src => `<div class="gallery-img"><img src="${src}" alt="Photo from ${t.title}" loading="lazy"></div>`).join("")}</div>
     `;
   }
 
