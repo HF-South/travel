@@ -147,10 +147,13 @@ document.querySelectorAll(".tab-btn").forEach(btn => {
 /* ---------------- Render ---------------- */
 
 function renderAll() {
+  siteData.diveSites = siteData.diveSites || [];
   renderCountries();
   renderTrips();
   renderHikes();
   renderDives();
+  renderDiveSitesList();
+  populateDiveSiteDropdown();
 }
 
 function renderCountries() {
@@ -374,6 +377,7 @@ function startEditDive(i) {
   document.getElementById("dive-temp").value = d.waterTempC || "";
   document.getElementById("dive-vis").value = d.visibilityM || "";
   document.getElementById("dive-notes").value = d.notes || "";
+  document.getElementById("dive-siteid").value = d.siteId || "";
   document.getElementById("save-dive-btn").textContent = "Save changes";
   document.getElementById("cancel-dive-edit-btn").style.display = "inline-block";
 }
@@ -382,6 +386,7 @@ function resetDiveForm() {
   editingDiveIndex = null;
   ["dive-date", "dive-location", "dive-site", "dive-buddy", "dive-depth", "dive-duration", "dive-temp", "dive-vis", "dive-notes"]
     .forEach(id => document.getElementById(id).value = "");
+  document.getElementById("dive-siteid").value = "";
   document.getElementById("dive-form-title").textContent = "Add a dive";
   document.getElementById("save-dive-btn").textContent = "Add dive";
   document.getElementById("cancel-dive-edit-btn").style.display = "none";
@@ -404,6 +409,7 @@ document.getElementById("save-dive-btn").addEventListener("click", () => {
     visibilityM: parseFloat(document.getElementById("dive-vis").value) || 0,
     buddy: document.getElementById("dive-buddy").value.trim(),
     notes: document.getElementById("dive-notes").value.trim(),
+    siteId: document.getElementById("dive-siteid").value || null,
     source: "manual",
   };
 
@@ -415,6 +421,212 @@ document.getElementById("save-dive-btn").addEventListener("click", () => {
   }
   resetDiveForm();
   renderDives();
+});
+
+/* ---------------- Dive Map (admin) ---------------- */
+
+let adminDiveMapInstance = null;
+let adminDiveMapMarkers = {}; // siteId -> maplibregl.Marker
+
+function slugifyName(str) {
+  return str.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
+}
+
+function makeSiteId(name) {
+  const base = slugifyName(name) || "site";
+  let id = base, n = 1;
+  const existing = new Set((siteData.diveSites || []).map(s => s.id));
+  while (existing.has(id)) { id = `${base}-${++n}`; }
+  return id;
+}
+
+function initAdminDiveMap() {
+  if (adminDiveMapInstance || typeof maplibregl === "undefined") return;
+
+  adminDiveMapInstance = new maplibregl.Map({
+    container: "admin-divemap-container",
+    style: "https://tiles.openfreemap.org/styles/liberty",
+    center: [10, 20],
+    zoom: 1.4,
+  });
+  adminDiveMapInstance.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
+
+  adminDiveMapInstance.on("load", () => {
+    renderAdminDiveMapMarkers();
+  });
+
+  // Click anywhere on the map (not on a pin) to add a new site
+  adminDiveMapInstance.on("click", (e) => {
+    addDiveSiteAt(e.lngLat.lat, e.lngLat.lng);
+  });
+}
+
+function addDiveSiteAt(lat, lng) {
+  const name = prompt("Name this dive site (e.g. \"Cas Abou\"):");
+  if (!name || !name.trim()) return;
+  const location = prompt("Country / region (optional):") || "";
+
+  const site = { id: makeSiteId(name), name: name.trim(), location: location.trim(), lat, lng };
+  siteData.diveSites = siteData.diveSites || [];
+  siteData.diveSites.push(site);
+
+  // Offer to bulk-link any unlinked dives whose free-text site name matches
+  const nameNorm = site.name.toLowerCase();
+  const matches = siteData.dives
+    .map((d, i) => ({ d, i }))
+    .filter(({ d }) => !d.siteId && d.site && d.site.toLowerCase().trim() === nameNorm);
+
+  if (matches.length > 0) {
+    const ok = confirm(`Found ${matches.length} logged dive${matches.length === 1 ? "" : "s"} at "${site.name}" not yet linked to a pin. Link them all to this new pin now?`);
+    if (ok) matches.forEach(({ i }) => { siteData.dives[i].siteId = site.id; });
+  }
+
+  renderAdminDiveMapMarkers();
+  renderDiveSitesList();
+  renderDives();
+  populateDiveSiteDropdown();
+}
+
+function renderAdminDiveMapMarkers() {
+  if (!adminDiveMapInstance) return;
+  Object.values(adminDiveMapMarkers).forEach(m => m.remove());
+  adminDiveMapMarkers = {};
+
+  (siteData.diveSites || []).forEach(site => {
+    const el = document.createElement("div");
+    el.className = "map-pin-marker";
+    el.style.cursor = "pointer";
+    el.addEventListener("click", (e) => {
+      e.stopPropagation(); // don't also trigger the map's "add new site" click handler
+      openDiveSiteManager(site.id);
+    });
+    const marker = new maplibregl.Marker({ element: el }).setLngLat([site.lng, site.lat]).addTo(adminDiveMapInstance);
+    adminDiveMapMarkers[site.id] = marker;
+  });
+}
+
+function renderDiveSitesList() {
+  const wrap = document.getElementById("divesites-list");
+  if (!wrap) return;
+  wrap.innerHTML = "";
+  const sites = siteData.diveSites || [];
+
+  if (sites.length === 0) {
+    wrap.innerHTML = `<p class="hint">No dive site pins yet — click the map above to add your first one.</p>`;
+    return;
+  }
+
+  sites.forEach(site => {
+    const count = siteData.dives.filter(d => d.siteId === site.id).length;
+    const row = document.createElement("div");
+    row.className = "list-item";
+    row.innerHTML = `
+      <div><strong>${site.name}</strong><div class="meta">${site.location || ""} · ${count} dive${count === 1 ? "" : "s"} linked</div></div>
+      <div class="actions">
+        <button data-action="manage">Manage</button>
+        <button data-action="rename">Rename</button>
+        <button class="danger" data-action="delete">Delete</button>
+      </div>`;
+    row.querySelector('[data-action="manage"]').addEventListener("click", () => openDiveSiteManager(site.id));
+    row.querySelector('[data-action="rename"]').addEventListener("click", () => {
+      const newName = prompt("Rename dive site:", site.name);
+      if (newName && newName.trim()) {
+        site.name = newName.trim();
+        renderDiveSitesList();
+        renderAdminDiveMapMarkers();
+        populateDiveSiteDropdown();
+      }
+    });
+    row.querySelector('[data-action="delete"]').addEventListener("click", () => {
+      if (!confirm(`Delete "${site.name}"? Dives linked to it will be unlinked (not deleted) — you can relink them to a different pin afterward.`)) return;
+      siteData.dives.forEach(d => { if (d.siteId === site.id) d.siteId = null; });
+      siteData.diveSites = siteData.diveSites.filter(s => s.id !== site.id);
+      renderDiveSitesList();
+      renderAdminDiveMapMarkers();
+      renderDives();
+      populateDiveSiteDropdown();
+      document.getElementById("divesite-link-panel").style.display = "none";
+    });
+    wrap.appendChild(row);
+  });
+}
+
+function openDiveSiteManager(siteId) {
+  const site = (siteData.diveSites || []).find(s => s.id === siteId);
+  const panel = document.getElementById("divesite-link-panel");
+  if (!site || !panel) return;
+
+  panel.style.display = "block";
+  panel.innerHTML = `
+    <h2>Dives at "${site.name}"</h2>
+    <p class="hint">Tick every dive that happened at this site — unlinked dives (no pin yet) are listed first.</p>
+    <div id="divesite-checklist"></div>
+    <button class="primary" id="divesite-save-links-btn">Save links</button>
+    <button id="divesite-close-btn">Close</button>
+  `;
+
+  const checklist = panel.querySelector("#divesite-checklist");
+  const withIndex = siteData.dives.map((d, i) => ({ d, i }));
+  const sorted = [
+    ...withIndex.filter(({ d }) => !d.siteId || d.siteId === siteId),
+    ...withIndex.filter(({ d }) => d.siteId && d.siteId !== siteId),
+  ];
+
+  sorted.forEach(({ d, i }) => {
+    const label = document.createElement("label");
+    label.style.cssText = "display:flex; align-items:center; gap:10px; padding:8px 0; border-top:1px solid var(--line-topo); font-size:0.88rem;";
+    const otherSite = d.siteId && d.siteId !== siteId ? (siteData.diveSites.find(s => s.id === d.siteId)?.name || "another pin") : null;
+    label.innerHTML = `
+      <input type="checkbox" data-i="${i}" ${d.siteId === siteId ? "checked" : ""}>
+      <span>${d.date || "Date unknown"} — ${d.site || "untitled"} ${d.location ? "(" + d.location + ")" : ""}
+      ${otherSite ? `<span class="pill" style="margin-left:6px;">linked to ${otherSite}</span>` : ""}</span>
+    `;
+    checklist.appendChild(label);
+  });
+
+  panel.querySelector("#divesite-save-links-btn").addEventListener("click", () => {
+    checklist.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+      const i = parseInt(cb.dataset.i, 10);
+      if (cb.checked) {
+        siteData.dives[i].siteId = siteId;
+      } else if (siteData.dives[i].siteId === siteId) {
+        siteData.dives[i].siteId = null;
+      }
+    });
+    renderDiveSitesList();
+    renderDives();
+    panel.style.display = "none";
+  });
+  panel.querySelector("#divesite-close-btn").addEventListener("click", () => {
+    panel.style.display = "none";
+  });
+}
+
+function populateDiveSiteDropdown() {
+  const select = document.getElementById("dive-siteid");
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = `<option value="">— not linked —</option>`;
+  (siteData.diveSites || []).forEach(site => {
+    const opt = document.createElement("option");
+    opt.value = site.id;
+    opt.textContent = site.name + (site.location ? ` (${site.location})` : "");
+    select.appendChild(opt);
+  });
+  select.value = current;
+}
+
+/* Init the admin dive map the first time its tab is opened (MapLibre
+   needs a visible, sized container). */
+document.querySelectorAll(".tab-btn").forEach(btn => {
+  if (btn.dataset.tab === "divemap") {
+    btn.addEventListener("click", () => {
+      setTimeout(() => {
+        initAdminDiveMap();
+        if (adminDiveMapInstance) adminDiveMapInstance.resize();
+      }, 0);
+    });
+  }
 });
 
 /* ---------------- Save to GitHub ---------------- */
