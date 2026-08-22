@@ -859,8 +859,8 @@ function diveProfileSvg(depthM, durationMin, width = 300, height = 64) {
 
   return `
     <svg class="dive-profile-svg" viewBox="0 0 ${width} ${height}" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
-      <polygon points="${areaPts}" fill="rgba(124,160,133,0.14)"></polygon>
-      <polyline points="${linePts}" fill="none" stroke="#7CA085" stroke-width="1.6" stroke-linejoin="round"></polyline>
+      <polygon points="${areaPts}" fill="rgba(79,168,184,0.14)"></polygon>
+      <polyline points="${linePts}" fill="none" stroke="#4FA8B8" stroke-width="1.6" stroke-linejoin="round"></polyline>
       <line x1="1" y1="${padTop - 2}" x2="${width - 1}" y2="${padTop - 2}" stroke="#24312C" stroke-width="1" stroke-dasharray="2 3"></line>
     </svg>
   `;
