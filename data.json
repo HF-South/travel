@@ -513,7 +513,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "5kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-11",
@@ -633,7 +634,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-20",
@@ -645,7 +647,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-22",
@@ -657,7 +660,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-24",
@@ -669,7 +673,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-24",
@@ -681,7 +686,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-24",
@@ -693,7 +699,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-26",
@@ -729,7 +736,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2021-08-31",
@@ -1113,7 +1121,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "Sunny · Medium wind · air 32°C · 6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2022-08-24",
@@ -1125,7 +1134,8 @@
       "visibilityM": 0,
       "buddy": "Ieteke",
       "notes": "Sunny · Medium wind · air 32°C · 6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2022-08-25",
@@ -1137,7 +1147,8 @@
       "visibilityM": 0,
       "buddy": "Erik",
       "notes": "Sunny · Medium wind · air 32°C · 6kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2022-08-26",
@@ -1389,7 +1400,8 @@
       "visibilityM": 0,
       "buddy": "Erik",
       "notes": "Sunny · Medium wind · air 35°C · 4kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2024-07-15",
@@ -1401,7 +1413,8 @@
       "visibilityM": 0,
       "buddy": "Erik",
       "notes": "Sunny · Medium wind · air 35°C · 4kg weights · 12L cylinder",
-      "source": "spreadsheet"
+      "source": "spreadsheet",
+      "siteId": "cas-abou"
     },
     {
       "date": "2024-07-16",
@@ -1500,9 +1513,17 @@
       "source": "spreadsheet"
     }
   ],
-  "diveSites": [],
+  "diveSites": [
+    {
+      "id": "cas-abou",
+      "name": "Cas Abou",
+      "location": "Curaçao",
+      "lat": 12.227922446568499,
+      "lng": -69.09225884501676
+    }
+  ],
   "meta": {
-    "lastUpdated": "2026-08-22T07:44:18.691Z",
+    "lastUpdated": "2026-08-22T07:46:29.399Z",
     "lastSynced": {
       "komoot": null,
       "polarsteps": null,
