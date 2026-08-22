@@ -625,7 +625,7 @@ function route() {
    a webhook URL embedded in a static site's JS is visible to anyone
    who looks, since there's no server to hide it behind. */
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/test/token"; // paste your Discord webhook URL here — see README.md
+const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1539478420403126323/WUD6gJcBeUt8jXSdocQlqW1Xu-XwSbljpTGOFWVE97QUtodSFoqU2f0043VSf3quIL6s"; // paste your Discord webhook URL here — see README.md
 
 function initContactForm() {
   const form = document.getElementById("contact-form");
