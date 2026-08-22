@@ -201,7 +201,7 @@
     border-right:1px solid var(--line-topo);
   }
   .stat-cell:last-child{ border-right:none; }
-  .stat-cell span{
+  .stat-cell > span{
     display:block;
     font-family:var(--font-mono);
     font-size:1.9rem;
@@ -215,7 +215,15 @@
     text-transform:uppercase;
     color:var(--text-muted);
   }
-  .trip-stats .stat-cell span{ font-size:1.3rem; }
+  .stat-cell label span{
+    display:inline;
+    font-family:var(--font-mono);
+    font-size:1em;
+    letter-spacing:normal;
+    text-transform:none;
+    color:var(--text-faint);
+  }
+  .trip-stats .stat-cell > span{ font-size:1.3rem; }
 
   /* ---------- Map ---------- */
   .map-wrap{
