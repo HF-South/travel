@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /admin.js
+
+Sitemap: https://www.samdoethet.com/sitemap.xml
