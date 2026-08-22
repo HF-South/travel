@@ -47,12 +47,6 @@ from collections import OrderedDict
 from datetime import datetime, timezone
 from pathlib import Path
 
-START_MARKER = "/* --- POLARSTEPS SYNC START (do not edit this block by hand — it gets overwritten by import_trips.py) --- */"
-END_MARKER = "/* --- POLARSTEPS SYNC END --- */"
-
-
-def esc(s):
-    return (s or "").replace("\\", "\\\\").replace('"', '\\"').replace("\n", " ").strip()
 
 
 def find_trip_json(trip_folder: Path):
@@ -231,77 +225,57 @@ def group_steps_by_day(trip, trip_folder: Path):
     return days
 
 
-def days_to_js(days):
-    if not days:
-        return ""
-    parts = []
-    for date_str, d in days.items():
-        photos_js = ", ".join(f'"{esc(u)}"' for u in d["photos"])
-        parts.append(f"""      {{
-        date: "{date_str}",
-        title: "{esc(d['title'])}",
-        description: "{esc(d['description'])[:220]}",
-        photos: [{photos_js}],
-      }},""")
-    return "\n".join(parts)
-
-
 def trip_to_entry(trip, trip_folder: Path):
-    title = esc(trip.get("name") or trip_folder.name)
-    description = esc(trip.get("summary") or trip.get("description") or "")
+    title = trip.get("name") or trip_folder.name
+    description = trip.get("summary") or trip.get("description") or ""
 
     start = trip.get("start_date")
     end = trip.get("end_date")
-    year = to_date_str(start)[:4] if to_date_str(start) else ""
+    year = int(to_date_str(start)[:4]) if to_date_str(start) else 0
 
     countries = extract_countries(trip)
-    country = esc(" / ".join(countries[:3])) if countries else ""
+    country = " / ".join(countries[:3]) if countries else ""
 
-    days = group_steps_by_day(trip, trip_folder)
-    all_photos = [p for d in days.values() for p in d["photos"]]
+    days_dict = group_steps_by_day(trip, trip_folder)
+    all_photos = [p for d in days_dict.values() for p in d["photos"]]
     cover = all_photos[0] if all_photos else ""
 
-    days_of_trip = ""
+    days_of_trip = 0
     if isinstance(start, (int, float)) and isinstance(end, (int, float)):
         days_of_trip = round((end - start) / 86400)
 
-    days_js = days_to_js(days)
+    day_by_day = [
+        {"date": date_str, "title": d["title"], "description": d["description"][:220], "photos": d["photos"]}
+        for date_str, d in days_dict.items()
+    ]
 
-    return f"""    {{
-      title: "{title}",
-      country: "{country}",
-      year: {year or 0},
-      season: "",
-      description: "{description[:180]}",
-      narrative: "{description}",
-      coverImage: "{esc(cover)}",
-      images: [],
-      highlights: [],
-      distanceKm: 0,
-      days: {days_of_trip or 0},
-      dayByDay: [
-{days_js}
-      ],
-    }},"""
+    return {
+        "title": title,
+        "country": country,
+        "year": year,
+        "season": "",
+        "description": description[:180],
+        "narrative": description,
+        "coverImage": cover,
+        "images": [],
+        "highlights": [],
+        "distanceKm": 0,
+        "days": days_of_trip,
+        "dayByDay": day_by_day,
+        "source": "polarsteps",
+    }
 
 
-def update_data_js(entries_text, path="data.js"):
+def update_data_json(new_trips, path="data.json"):
     with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
+        data = json.load(f)
 
-    if START_MARKER not in content:
-        content = content.replace(
-            "trips: [",
-            f"trips: [\n{START_MARKER}\n{entries_text}\n    {END_MARKER}\n",
-            1,
-        )
-    else:
-        pattern = re.compile(re.escape(START_MARKER) + r".*?" + re.escape(END_MARKER), re.DOTALL)
-        replacement = START_MARKER + "\n" + entries_text + "\n    " + END_MARKER
-        content = pattern.sub(replacement, content, count=1)
+    kept = [t for t in data.get("trips", []) if t.get("source") != "polarsteps"]
+    data["trips"] = kept + new_trips
 
     with open(path, "w", encoding="utf-8") as f:
-        f.write(content)
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 def main():
@@ -315,7 +289,6 @@ def main():
         sys.exit(1)
 
     entries = []
-    total_photos = 0
     for trip_folder in sorted(p for p in trips_root.iterdir() if p.is_dir()):
         trip_json = find_trip_json(trip_folder)
         if not trip_json:
@@ -331,14 +304,14 @@ def main():
         print(f"Parsed: {trip.get('name', trip_folder.name)}")
 
     if not entries:
-        print("No trips parsed — nothing changed in data.js.")
+        print("No trips parsed — nothing changed in data.json.")
         return
 
-    update_data_js("\n".join(entries))
-    print(f"\nDone — wrote {len(entries)} trips into data.js, broken down day by day.")
+    update_data_json(entries)
+    print(f"\nDone — wrote {len(entries)} trips into data.json, broken down day by day.")
     print("Note: photo paths point to files inside your export folder — move")
     print("those photos next to index.html (e.g. an /images folder) and update")
-    print("the paths in data.js, or swap in hosted image URLs instead.")
+    print("the paths in data.json, or swap in hosted image URLs instead.")
 
 
 if __name__ == "__main__":
