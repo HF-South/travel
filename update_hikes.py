@@ -2,7 +2,7 @@
 """
 update_hikes.py
 ----------------
-Pulls your tours from Komoot and rewrites the hikes list in data.js,
+Pulls your tours from Komoot and updates the hikes list in data.json,
 so your site's Hikes page and stats stay current.
 
 USAGE
@@ -25,22 +25,18 @@ not offer a public API for individual developers. It only pulls tours
 tagged as hikes ("hike" sport type) by default — pass --sport all to
 pull every activity type instead.
 
-This script only touches the block between the
-"KOMOOT SYNC START" / "KOMOOT SYNC END" markers in data.js.
-Anything you added by hand below that block is left alone.
+This only replaces hikes tagged "source": "komoot" in data.json. Any
+hike you added by hand (with a different/no source tag, or manually
+set to "manual") is left completely alone.
 """
 
 import argparse
 import json
-import re
 import sys
 import urllib.request
 
 USER_ID = "5843767106413"
 BASE_URL = "https://www.komoot.com/api/v007/users/{user_id}/tours/"
-
-START_MARKER = "/* --- KOMOOT SYNC START (do not edit this block by hand — it gets overwritten by update_hikes.py) --- */"
-END_MARKER = "/* --- KOMOOT SYNC END --- */"
 
 
 def fetch_tours(user_id, cookie=None, sport="hike"):
@@ -79,44 +75,30 @@ def fetch_tours(user_id, cookie=None, sport="hike"):
 
 
 def tour_to_entry(t):
-    name = (t.get("name") or "Untitled tour").replace('"', "'")
-    date = (t.get("date") or t.get("time") or "")[:10]
-    distance_km = round((t.get("distance") or 0) / 1000, 1)
-    up = round(t.get("elevation_up") or 0)
-    down = round(t.get("elevation_down") or 0)
-    duration_min = round((t.get("duration") or 0) / 60)
     tour_id = t.get("id")
-    url = f"https://www.komoot.com/tour/{tour_id}" if tour_id else ""
+    return {
+        "name": t.get("name") or "Untitled tour",
+        "date": (t.get("date") or t.get("time") or "")[:10],
+        "distanceKm": round((t.get("distance") or 0) / 1000, 1),
+        "elevationUp": round(t.get("elevation_up") or 0),
+        "elevationDown": round(t.get("elevation_down") or 0),
+        "durationMin": round((t.get("duration") or 0) / 60),
+        "country": "",
+        "url": f"https://www.komoot.com/tour/{tour_id}" if tour_id else "",
+        "source": "komoot",
+    }
 
-    return f"""    {{
-      name: "{name}",
-      date: "{date}",
-      distanceKm: {distance_km},
-      elevationUp: {up},
-      elevationDown: {down},
-      durationMin: {duration_min},
-      country: "",
-      url: "{url}",
-    }},"""
 
-
-def update_data_js(entries_text, path="data.js"):
+def update_data_json(new_hikes, path="data.json"):
     with open(path, "r", encoding="utf-8") as f:
-        content = f.read()
+        data = json.load(f)
 
-    if START_MARKER not in content or END_MARKER not in content:
-        print("Could not find sync markers in data.js — is this the right file/folder?", file=sys.stderr)
-        sys.exit(1)
-
-    pattern = re.compile(
-        re.escape(START_MARKER) + r".*?" + re.escape(END_MARKER),
-        re.DOTALL,
-    )
-    replacement = START_MARKER + "\n" + entries_text + "\n    " + END_MARKER
-    new_content = pattern.sub(replacement, content, count=1)
+    kept = [h for h in data.get("hikes", []) if h.get("source") != "komoot"]
+    data["hikes"] = kept + new_hikes
 
     with open(path, "w", encoding="utf-8") as f:
-        f.write(new_content)
+        json.dump(data, f, indent=2, ensure_ascii=False)
+        f.write("\n")
 
 
 def main():
@@ -124,7 +106,7 @@ def main():
     parser.add_argument("--user-id", default=USER_ID, help="Komoot numeric user id")
     parser.add_argument("--cookie", default=None, help="Komoot session cookie, for private tours")
     parser.add_argument("--sport", default="hike", help='"hike" (default) or "all"')
-    parser.add_argument("--file", default="data.js", help="Path to data.js")
+    parser.add_argument("--file", default="data.json", help="Path to data.json")
     args = parser.parse_args()
 
     print(f"Fetching tours for user {args.user_id} (sport={args.sport})...")
@@ -135,11 +117,11 @@ def main():
               "If your profile/tours are private, pass --cookie. Nothing was changed.")
         return
 
-    entries = "\n".join(tour_to_entry(t) for t in tours)
-    update_data_js(entries, path=args.file)
-    print(f"Done — wrote {len(tours)} hikes into {args.file}.")
+    entries = [tour_to_entry(t) for t in tours]
+    update_data_json(entries, path=args.file)
+    print(f"Done — wrote {len(entries)} hikes into {args.file}.")
     print("Open index.html (or refresh it) to see the update.")
-    print("Tip: the 'country' field is left blank — fill it in by hand in data.js if you want hikes grouped/labelled by country.")
+    print("Tip: the 'country' field is left blank — fill it in by hand in data.json if you want hikes grouped/labelled by country.")
 
 
 if __name__ == "__main__":
